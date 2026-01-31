@@ -1,21 +1,31 @@
 import React, { useState } from 'react';
 import { View, TextInput, Button, StyleSheet, Alert, Text, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { AddTransactionViewModel } from '../../viewmodel/AddTransactionViewModel';
 
 export function AddTransactionScreen() {
   const navigation = useNavigation();
-  const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
-  const [type, setType] = useState<'income' | 'expense'>('expense');
+  const route = useRoute<any>();
+  const transaction = route.params?.transaction;
+
+  const [amount, setAmount] = useState(transaction ? transaction.amount.toString() : '');
+  const [description, setDescription] = useState(transaction ? transaction.description : '');
+  const [type, setType] = useState<'income' | 'expense'>(transaction ? transaction.type : 'expense');
+  const [category, setCategory] = useState(transaction ? transaction.category : '');
   const [loading, setLoading] = useState(false);
 
   const viewModel = new AddTransactionViewModel();
 
+  const categories = ['Alimentação', 'Transporte', 'Moradia', 'Lazer', 'Saúde', 'Outros'];
+
   const handleSave = async () => {
     try {
       setLoading(true);
-      await viewModel.add(amount, description, type);
+      if (transaction && transaction.id) {
+        await viewModel.update(transaction.id, amount, description, type, category);
+      } else {
+        await viewModel.add(amount, description, type, category);
+      }
       navigation.goBack();
     } catch (e: any) {
       Alert.alert('Erro', e.message);
@@ -58,7 +68,20 @@ export function AddTransactionScreen() {
         </TouchableOpacity>
       </View>
 
-      <Button title={loading ? "Salvando..." : "Salvar"} onPress={handleSave} />
+      <Text style={styles.label}>Categoria</Text>
+      <View style={styles.categoriesContainer}>
+        {categories.map((cat) => (
+          <TouchableOpacity
+            key={cat}
+            style={[styles.categoryButton, category === cat && styles.activeCategory]}
+            onPress={() => setCategory(cat)}
+          >
+            <Text style={[styles.categoryText, category === cat && styles.activeCategoryText]}>{cat}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <Button title={loading ? "Salvando..." : "Salvar"} onPress={handleSave} disabled={loading} />
     </View>
   );
 }
@@ -72,4 +95,10 @@ const styles = StyleSheet.create({
   activeIncome: { backgroundColor: '#c8e6c9', borderColor: 'green' },
   activeExpense: { backgroundColor: '#ffcdd2', borderColor: 'red' },
   typeText: { fontWeight: 'bold' },
+  
+  categoriesContainer: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 20, gap: 10 },
+  categoryButton: { padding: 10, borderWidth: 1, borderColor: '#ccc', borderRadius: 20, marginBottom: 5 },
+  activeCategory: { backgroundColor: '#2196F3', borderColor: '#2196F3' },
+  categoryText: { color: '#333' },
+  activeCategoryText: { color: '#fff', fontWeight: 'bold' },
 });

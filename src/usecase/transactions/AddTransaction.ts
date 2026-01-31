@@ -12,6 +12,12 @@ export class AddTransaction {
     if (!transaction.user_id) throw new Error('User ID required');
     if (!transaction.amount) throw new Error('Amount required');
     
+    // Monthly limit check
+    const currentCount = await this.repo.countByMonth(transaction.user_id, new Date());
+    if (currentCount >= 200) {
+      throw new Error('Limite mensal de 200 transações atingido.');
+    }
+
     await this.repo.add(transaction);
   }
 }
