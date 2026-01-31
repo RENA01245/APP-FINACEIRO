@@ -13,7 +13,7 @@ jest.mock('@supabase/supabase-js', () => ({
       signInWithPassword: jest.fn(),
       signUp: jest.fn(),
       signOut: jest.fn(),
-      onAuthStateChange: jest.fn(() => ({ data: { subscription: { unsubscribe: jest.fn() } } })),
+      onAuthStateChange: jest.fn(() => ({ data: { subscription: { unsubscribe: jest.fn(), id: 'mock-id', callback: jest.fn() } } })),
       getSession: jest.fn(),
     },
     from: jest.fn(() => ({

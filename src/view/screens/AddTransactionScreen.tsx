@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, StyleSheet, Alert, Text, TouchableOpacity, Switch } from 'react-native';
+import { View, TextInput, Button, StyleSheet, Alert, Text, TouchableOpacity, Switch, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { AddTransactionViewModel } from '../../viewmodel/AddTransactionViewModel';
 
@@ -13,6 +14,8 @@ export function AddTransactionScreen() {
   const [type, setType] = useState<'income' | 'expense'>(transaction ? transaction.type : 'expense');
   const [category, setCategory] = useState(transaction ? transaction.category : '');
   const [isRecurring, setIsRecurring] = useState(transaction ? transaction.isRecurring : false);
+  const [date, setDate] = useState(transaction?.created_at ? new Date(transaction.created_at) : new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const viewModel = new AddTransactionViewModel();
@@ -23,9 +26,9 @@ export function AddTransactionScreen() {
     try {
       setLoading(true);
       if (transaction && transaction.id) {
-        await viewModel.update(transaction.id, amount, description, type, category, isRecurring);
+        await viewModel.update(transaction.id, amount, description, type, category, isRecurring, date);
       } else {
-        await viewModel.add(amount, description, type, category, isRecurring);
+        await viewModel.add(amount, description, type, category, isRecurring, date);
       }
       navigation.goBack();
     } catch (e: any) {
@@ -37,6 +40,28 @@ export function AddTransactionScreen() {
 
   return (
     <View style={styles.container}>
+      <Text style={styles.label}>Data</Text>
+      <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
+        <Text>{date.toLocaleDateString()}</Text>
+      </TouchableOpacity>
+      {showDatePicker && (
+        <DateTimePicker
+          value={date}
+          mode="date"
+          display="default"
+          maximumDate={new Date()}
+          onChange={(event, selectedDate) => {
+            setShowDatePicker(false);
+            if (selectedDate) setDate(selectedDate);
+          }}
+        />
+      )}
+
+      <View style={styles.switchContainer}>
+        <Text style={styles.label}>Recorrente</Text>
+        <Switch value={isRecurring} onValueChange={setIsRecurring} />
+      </View>
+
       <Text style={styles.label}>Valor</Text>
       <TextInput
         style={styles.input}

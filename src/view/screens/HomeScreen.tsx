@@ -1,12 +1,15 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, Button, FlatList, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, Button, FlatList, StyleSheet, Alert, TouchableOpacity, Modal, TextInput, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { AuthViewModel } from '../../viewmodel/AuthViewModel';
 import { HomeViewModel } from '../../viewmodel/HomeViewModel';
 import { BudgetViewModel } from '../../viewmodel/BudgetViewModel';
+import { PayablesViewModel } from '../../viewmodel/PayablesViewModel';
 import { Transaction } from '../../model/Transaction';
+import { Payable } from '../../model/Payable';
+import { BudgetProgressBar } from '../components/BudgetProgressBar';
 
 export function HomeScreen() {
   const navigation = useNavigation<any>();
@@ -19,8 +22,10 @@ export function HomeScreen() {
   
   // Budget State
   const [budgetViewModel] = useState(() => new BudgetViewModel());
+  const [payablesViewModel] = useState(() => new PayablesViewModel());
   const [budgetModalVisible, setBudgetModalVisible] = useState(false);
   const [budgetStatus, setBudgetStatus] = useState<{category: string, budget: number, spent: number}[]>([]);
+  const [upcomingPayables, setUpcomingPayables] = useState<Payable[]>([]);
   const [categories] = useState(['Alimentação', 'Transporte', 'Lazer', 'Contas', 'Saúde', 'Outros']);
 
   const loadBudgets = async () => {
@@ -59,9 +64,17 @@ export function HomeScreen() {
 
   const loadData = async () => {
     try {
-      // Check for recurring transactions (only once per session technically, but safe to check here)
+      // Check for recurring transactions
       await homeViewModel.checkRecurring();
       
+      // Load budgets
+      await loadBudgets();
+
+      // Load upcoming payables
+      const pending = await payablesViewModel.getPending();
+      // Show only top 2 soonest
+      setUpcomingPayables(pending.slice(0, 2));
+
       const data = await homeViewModel.getTransactions();
       setTransactions(data);
       setSummary(homeViewModel.calculateSummary(data));
@@ -163,8 +176,13 @@ export function HomeScreen() {
                 loadBudgets();
                 setBudgetModalVisible(true);
             }}>
-                <Feather name="pie-chart" size={20} color="#fff" />
-                <Text style={styles.actionButtonText}>Orçamento</Text>
+                <Feather name="target" size={20} color="#fff" />
+                <Text style={styles.actionButtonText}>Metas</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#2196f3'}]} onPress={() => navigation.navigate('Reports', { date: homeViewModel.currentDate.toISOString() })}>
+                <Feather name="bar-chart-2" size={20} color="#fff" />
+                <Text style={styles.actionButtonText}>Relatórios</Text>
             </TouchableOpacity>
         </View>
       </View>
@@ -173,6 +191,44 @@ export function HomeScreen() {
         data={transactions}
         keyExtractor={(item) => item.id || Math.random().toString()}
         contentContainerStyle={styles.list}
+        ListHeaderComponent={
+          <View>
+            {upcomingPayables.length > 0 && (
+              <View style={styles.budgetSection}>
+                <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10}}>
+                   <Text style={styles.sectionTitle}>Próximas Contas</Text>
+                   <TouchableOpacity onPress={() => navigation.navigate('Payables')}>
+                     <Text style={{color: '#2196f3', fontSize: 12}}>Ver todas</Text>
+                   </TouchableOpacity>
+                </View>
+                {upcomingPayables.map((item, index) => (
+                  <View key={index} style={styles.payableItem}>
+                    <View>
+                        <Text style={styles.payableDesc}>{item.description}</Text>
+                        <Text style={styles.payableDate}>Vence: {new Date(item.due_date).toLocaleDateString('pt-BR')}</Text>
+                    </View>
+                    <Text style={styles.payableAmount}>R$ {item.amount.toFixed(2)}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {budgetStatus.some(b => b.budget > 0) && (
+              <View style={styles.budgetSection}>
+                <Text style={styles.sectionTitle}>Orçamento Mensal</Text>
+                {budgetStatus.map((item, index) => (
+                   <BudgetProgressBar 
+                      key={index}
+                      category={item.category}
+                      budget={item.budget}
+                      spent={item.spent}
+                   />
+                ))}
+              </View>
+            )}
+            <Text style={styles.sectionTitle}>Transações</Text>
+          </View>
+        }
         renderItem={({ item }) => (
           <View style={[styles.card, item.type === 'expense' ? styles.expense : styles.income]}>
             <View style={styles.cardContent}>
@@ -192,6 +248,46 @@ export function HomeScreen() {
         )}
         ListEmptyComponent={<Text style={styles.empty}>Nenhuma transação</Text>}
       />
+
+      <Modal
+        visible={budgetModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setBudgetModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Definir Orçamentos</Text>
+                  <TouchableOpacity onPress={() => setBudgetModalVisible(false)}>
+                      <Feather name="x" size={24} color="#333" />
+                  </TouchableOpacity>
+              </View>
+              <ScrollView>
+                  {budgetStatus.map((item, index) => (
+                      <View key={index} style={styles.budgetRow}>
+                          <View style={styles.budgetInfo}>
+                              <Text style={styles.budgetCategory}>{item.category}</Text>
+                          </View>
+                          <View style={styles.budgetValues}>
+                              <Text style={styles.budgetSpent}>Gasto: R$ {item.spent.toFixed(2)}</Text>
+                              <View style={styles.budgetInputContainer}>
+                                  <Text>Meta: R$ </Text>
+                                  <TextInput 
+                                      style={styles.budgetInput}
+                                      keyboardType="numeric"
+                                      placeholder="0.00"
+                                      defaultValue={item.budget > 0 ? item.budget.toString() : ''}
+                                      onEndEditing={(e) => saveBudget(item.category, e.nativeEvent.text)}
+                                  />
+                              </View>
+                          </View>
+                      </View>
+                  ))}
+              </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -248,7 +344,10 @@ const styles = StyleSheet.create({
 
   actions: { marginBottom: 15 },
   
-  list: { paddingBottom: 20 },
+  seeMoreText: { textAlign: 'center', color: '#2196F3', marginTop: 5, fontSize: 12 },
+  budgetSection: { marginBottom: 15 },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: '#333' },
+  list: { paddingBottom: 80 },
   card: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
@@ -292,7 +391,31 @@ const styles = StyleSheet.create({
   budgetValues: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 },
   budgetSpent: { color: '#666' },
   budgetInputContainer: { flexDirection: 'row', alignItems: 'center' },
-  budgetInput: { borderBottomWidth: 1, borderColor: '#ccc', width: 60, textAlign: 'center', padding: 0 },
-  progressBarBg: { height: 10, backgroundColor: '#eee', borderRadius: 5, overflow: 'hidden' },
-  progressBarFill: { height: '100%' },
+  budgetInput: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+    width: 80,
+    textAlign: 'right',
+    padding: 2
+  },
+  payableItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee'
+  },
+  payableDesc: {
+    fontWeight: '500',
+    color: '#333'
+  },
+  payableDate: {
+    fontSize: 12,
+    color: '#666'
+  },
+  payableAmount: {
+    fontWeight: 'bold',
+    color: '#f44336'
+  }
 });

@@ -60,7 +60,9 @@ export class TransactionRepositorySupabase {
         amount: transaction.amount,
         description: transaction.description,
         type: transaction.type,
-        category: transaction.category
+        category: transaction.category,
+        is_recurring: transaction.isRecurring,
+        created_at: transaction.created_at // Allow updating the date
       })
       .eq('id', transaction.id);
 
@@ -82,14 +84,14 @@ export class TransactionRepositorySupabase {
 
   async countByMonth(userId: string, date: Date): Promise<number> {
     const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1).toISOString();
-    const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).toISOString();
+    const startOfNextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 1).toISOString();
 
     const { count, error } = await supabase
       .from('transactions')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
       .gte('created_at', startOfMonth)
-      .lte('created_at', endOfMonth);
+      .lt('created_at', startOfNextMonth);
 
     if (error) {
       throw new Error(error.message);

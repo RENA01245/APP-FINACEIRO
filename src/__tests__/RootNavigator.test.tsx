@@ -50,7 +50,7 @@ describe('RootNavigator', () => {
     // Mock execute to NOT callback immediately (simulating loading)
     // Fix return structure to match { data: { subscription: ... } }
     mockObserveAuthState.execute.mockReturnValue({ 
-      data: { subscription: { unsubscribe: jest.fn() } } 
+      data: { subscription: { unsubscribe: jest.fn(), id: 'mock-id', callback: jest.fn() } } 
     });
 
     const { getByTestId } = render(<RootNavigator />);
@@ -63,7 +63,7 @@ describe('RootNavigator', () => {
     mockObserveAuthState.execute.mockImplementation((callback) => {
       callback(null); // No session
       return { 
-        data: { subscription: { unsubscribe: jest.fn() } } 
+        data: { subscription: { unsubscribe: jest.fn(), id: 'mock-id', callback: jest.fn() } } 
       };
     });
 
@@ -77,7 +77,7 @@ describe('RootNavigator', () => {
       // @ts-ignore
       callback({ user: { id: '123' } }); // With session
       return { 
-        data: { subscription: { unsubscribe: jest.fn() } } 
+        data: { subscription: { unsubscribe: jest.fn(), id: 'mock-id', callback: jest.fn() } } 
       };
     });
 
@@ -86,3 +86,4 @@ describe('RootNavigator', () => {
     await waitFor(() => expect(findByText('Home Screen')).toBeTruthy());
   });
 });
+0

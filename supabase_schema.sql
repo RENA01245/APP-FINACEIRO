@@ -1,27 +1,79 @@
--- Criação da tabela de transações
-create table public.transactions (
+-- 1. Tabela de Transações (Transactions)
+create table if not exists public.transactions (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users not null,
   amount numeric not null,
   description text,
   type text check (type in ('income', 'expense')) not null,
+  category text,
+  is_recurring boolean default false,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- Habilita Row Level Security (RLS) para segurança
+-- Habilita RLS
 alter table public.transactions enable row level security;
 
--- Política para permitir que usuários vejam apenas suas próprias transações
+-- Políticas de Segurança (Transactions)
 create policy "Usuários podem ver suas próprias transações"
 on public.transactions for select
 using (auth.uid() = user_id);
 
--- Política para permitir que usuários insiram suas próprias transações
 create policy "Usuários podem inserir suas próprias transações"
 on public.transactions for insert
 with check (auth.uid() = user_id);
 
--- Política para permitir que usuários deletem suas próprias transações (opcional)
+create policy "Usuários podem atualizar suas próprias transações"
+on public.transactions for update
+using (auth.uid() = user_id);
+
 create policy "Usuários podem deletar suas próprias transações"
 on public.transactions for delete
+using (auth.uid() = user_id);
+
+
+-- 2. Tabela de Orçamentos (Budgets)
+create table if not exists public.budgets (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users not null,
+  category text not null,
+  amount numeric not null,
+  month text not null, -- Formato: 'YYYY-MM'
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  unique(user_id, category, month) -- Garante apenas um orçamento por categoria/mês
+);
+
+-- Habilita RLS
+alter table public.budgets enable row level security;
+
+-- Políticas de Segurança (Budgets)
+create policy "Usuários podem ver seus próprios orçamentos"
+on public.budgets for select
+using (auth.uid() = user_id);
+
+create policy "Usuários podem inserir e atualizar seus próprios orçamentos"
+on public.budgets for all
+using (auth.uid() = user_id);
+
+
+-- 3. Tabela de Contas a Pagar (Payables)
+create table if not exists public.payables (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users not null,
+  description text not null,
+  amount numeric not null,
+  due_date timestamp with time zone not null,
+  status text check (status in ('pending', 'paid')) default 'pending',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Habilita RLS
+alter table public.payables enable row level security;
+
+-- Políticas de Segurança (Payables)
+create policy "Usuários podem ver suas próprias contas"
+on public.payables for select
+using (auth.uid() = user_id);
+
+create policy "Usuários podem gerenciar suas próprias contas"
+on public.payables for all
 using (auth.uid() = user_id);

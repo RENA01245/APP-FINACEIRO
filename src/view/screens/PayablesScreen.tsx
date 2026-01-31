@@ -1,5 +1,6 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, Button, TextInput, Alert, TouchableOpacity, Modal } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, FlatList, StyleSheet, Button, TextInput, Alert, TouchableOpacity, Modal, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 
 import { NotificationService } from '../../infra/services/NotificationService';
@@ -11,6 +12,12 @@ export function PayablesScreen() {
   const [payables, setPayables] = useState<Payable[]>([]);
   const [viewModel] = useState(() => new PayablesViewModel());
   const [modalVisible, setModalVisible] = useState(false);
+  
+  // Payment Modal State
+  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [selectedPayable, setSelectedPayable] = useState<Payable | null>(null);
+  const [paymentDate, setPaymentDate] = useState(new Date());
+  const [showPaymentDatePicker, setShowPaymentDatePicker] = useState(false);
   
   // Form state
   const [description, setDescription] = useState('');
@@ -74,26 +81,23 @@ export function PayablesScreen() {
     }
   };
 
-  const handlePay = async (payable: Payable) => {
-    Alert.alert(
-      'Pagar Conta',
-      `Confirmar pagamento de ${payable.description}?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Confirmar',
-          onPress: async () => {
-            try {
-              await viewModel.pay(payable);
-              loadData();
-              Alert.alert('Pago!', 'Conta paga e registrada como despesa.');
-            } catch (e: any) {
-              Alert.alert('Erro', e.message);
-            }
-          }
-        }
-      ]
-    );
+  const handlePay = (payable: Payable) => {
+    setSelectedPayable(payable);
+    setPaymentDate(new Date());
+    setPaymentModalVisible(true);
+  };
+
+  const confirmPayment = async () => {
+    if (!selectedPayable) return;
+    
+    try {
+      await viewModel.pay(selectedPayable, paymentDate);
+      setPaymentModalVisible(false);
+      loadData();
+      Alert.alert('Pago!', 'Conta paga e registrada como despesa.');
+    } catch (e: any) {
+      Alert.alert('Erro', e.message);
+    }
   };
 
 
@@ -159,6 +163,48 @@ export function PayablesScreen() {
             <View style={styles.modalButtons}>
               <Button title="Cancelar" color="red" onPress={() => setModalVisible(false)} />
               <Button title={loading ? "Salvando..." : "Salvar"} onPress={handleAdd} disabled={loading} />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Payment Confirmation Modal */}
+      <Modal visible={paymentModalVisible} animationType="fade" transparent={true}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Confirmar Pagamento</Text>
+            
+            {selectedPayable && (
+               <Text style={{marginBottom: 15, fontSize: 16, textAlign: 'center'}}>
+                 Pagar {selectedPayable.description} no valor de R$ {selectedPayable.amount.toFixed(2)}?
+               </Text>
+            )}
+
+            <Text style={{marginBottom: 5, fontWeight: 'bold'}}>Data do Pagamento:</Text>
+            
+            <TouchableOpacity 
+              style={styles.dateButton} 
+              onPress={() => setShowPaymentDatePicker(true)}
+            >
+              <Text>{paymentDate.toLocaleDateString('pt-BR')}</Text>
+            </TouchableOpacity>
+
+            {showPaymentDatePicker && (
+              <DateTimePicker
+                value={paymentDate}
+                mode="date"
+                display="default"
+                maximumDate={new Date()}
+                onChange={(event, selectedDate) => {
+                  setShowPaymentDatePicker(false);
+                  if (selectedDate) setPaymentDate(selectedDate);
+                }}
+              />
+            )}
+
+            <View style={styles.modalButtons}>
+              <Button title="Cancelar" color="red" onPress={() => setPaymentModalVisible(false)} />
+              <Button title="Confirmar" onPress={confirmPayment} />
             </View>
           </View>
         </View>

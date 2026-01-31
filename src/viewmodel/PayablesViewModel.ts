@@ -27,7 +27,7 @@ export class PayablesViewModel {
 
     if (!description) throw new Error('Descrição obrigatória');
 
-    await this.addUseCase.execute({
+    const createdPayable = await this.addUseCase.execute({
       user_id: session.user.id,
       description,
       amount: value,
@@ -43,14 +43,17 @@ export class PayablesViewModel {
     // Actually, if it's today and past 9 AM, it might trigger immediately or fail.
     // The service handles "past date" check, so we are safe.
     
-    await NotificationService.scheduleNotification(
-      'Conta a Pagar',
-      `Lembrete: Pagar ${description} no valor de R$ ${value.toFixed(2)}`,
-      triggerDate
-    );
+    if (createdPayable && createdPayable.id) {
+      await NotificationService.scheduleNotification(
+        'Conta a Pagar',
+        `Lembrete: Pagar ${description} no valor de R$ ${value.toFixed(2)}`,
+        triggerDate,
+        createdPayable.id
+      );
+    }
   }
 
-  async pay(payable: Payable) {
+  async pay(payable: Payable, date?: Date) {
     const session = await this.getSessionUseCase.execute();
     if (!session?.user) throw new Error('Usuário não autenticado');
 
@@ -62,7 +65,12 @@ export class PayablesViewModel {
       session.user.id, 
       payable.amount, 
       payable.description, 
-      category
+      category,
+      date
     );
+
+    if (payable.id) {
+      await NotificationService.cancelNotification(payable.id);
+    }
   }
 }

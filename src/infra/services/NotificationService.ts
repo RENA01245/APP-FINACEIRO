@@ -8,7 +8,6 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
     shouldShowBanner: true,
     shouldShowList: true,
-    priority: Notifications.AndroidNotificationPriority.HIGH,
   }),
 });
 
@@ -27,7 +26,7 @@ export class NotificationService {
     return finalStatus === 'granted';
   }
 
-  static async scheduleNotification(title: string, body: string, triggerDate: Date) {
+  static async scheduleNotification(title: string, body: string, triggerDate: Date, id?: string) {
     if (Platform.OS === 'web') return;
 
     // Ensure date is in the future
@@ -46,9 +45,19 @@ export class NotificationService {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
           date: triggerDate,
         },
+        identifier: id, // Use custom ID if provided
       });
     } catch (error) {
       console.log('Error scheduling notification:', error);
+    }
+  }
+
+  static async cancelNotification(id: string) {
+    if (Platform.OS === 'web') return;
+    try {
+      await Notifications.cancelScheduledNotificationAsync(id);
+    } catch (error) {
+      console.log('Error cancelling notification:', error);
     }
   }
 }

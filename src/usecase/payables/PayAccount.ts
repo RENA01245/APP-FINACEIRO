@@ -7,13 +7,14 @@ export class PayAccount {
     this.repo = new PayableRepositorySupabase();
   }
 
-  async execute(payableId: string, userId: string, amount: number, description: string, category: string) {
+  async execute(payableId: string, userId: string, amount: number, description: string, category: string, date?: Date) {
     await this.repo.markAsPaid(payableId, {
       user_id: userId,
       amount,
       description,
       type: 'expense',
-      category
+      category,
+      created_at: date ? date.toISOString() : undefined
     });
   }
 }

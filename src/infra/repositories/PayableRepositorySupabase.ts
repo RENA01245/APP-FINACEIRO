@@ -56,7 +56,7 @@ export class PayableRepositorySupabase {
         description: transaction.description,
         type: 'expense',
         category: transaction.category,
-        created_at: new Date().toISOString()
+        created_at: transaction.created_at || new Date().toISOString()
       });
 
     if (insertError) {

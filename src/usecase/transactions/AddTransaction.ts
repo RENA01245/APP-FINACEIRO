@@ -12,6 +12,9 @@ export class AddTransaction {
     if (!transaction.user_id) throw new Error('User ID required');
     if (!transaction.amount) throw new Error('Amount required');
     
+    // Round to 2 decimal places (Domain Rule)
+    transaction.amount = Math.round(transaction.amount * 100) / 100;
+    
     // Monthly limit check
     const currentCount = await this.repo.countByMonth(transaction.user_id, new Date());
     if (currentCount >= 200) {
