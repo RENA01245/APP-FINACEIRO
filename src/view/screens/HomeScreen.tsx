@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { AuthViewModel } from '../../viewmodel/AuthViewModel';
 import { HomeViewModel } from '../../viewmodel/HomeViewModel';
+import { BudgetViewModel } from '../../viewmodel/BudgetViewModel';
 import { Transaction } from '../../model/Transaction';
 
 export function HomeScreen() {
@@ -14,8 +15,47 @@ export function HomeScreen() {
   const [monthLabel, setMonthLabel] = useState('');
   
   const authViewModel = new AuthViewModel();
-  // We need to keep the instance to preserve state (currentDate)
   const [homeViewModel] = useState(() => new HomeViewModel());
+  
+  // Budget State
+  const [budgetViewModel] = useState(() => new BudgetViewModel());
+  const [budgetModalVisible, setBudgetModalVisible] = useState(false);
+  const [budgetStatus, setBudgetStatus] = useState<{category: string, budget: number, spent: number}[]>([]);
+  const [categories] = useState(['Alimentação', 'Transporte', 'Lazer', 'Contas', 'Saúde', 'Outros']);
+
+  const loadBudgets = async () => {
+    try {
+        const monthStr = homeViewModel.currentDate.toISOString().slice(0, 7); // YYYY-MM
+        const status = await budgetViewModel.getBudgetsStatus(monthStr);
+        
+        // Merge with fixed categories to ensure all are shown
+        const mergedStatus = categories.map(cat => {
+            const existing = status.find(s => s.category === cat);
+            return existing || { category: cat, budget: 0, spent: 0 };
+        });
+        
+        // Also add any categories that have budgets but are not in the fixed list (custom ones)
+        status.forEach(s => {
+            if (!categories.includes(s.category)) {
+                mergedStatus.push(s);
+            }
+        });
+        
+        setBudgetStatus(mergedStatus);
+    } catch (e) {
+        console.log(e);
+    }
+  };
+
+  const saveBudget = async (category: string, amount: string) => {
+      try {
+          const monthStr = homeViewModel.currentDate.toISOString().slice(0, 7);
+          await budgetViewModel.setBudget(category, amount, monthStr);
+          loadBudgets(); // Refresh
+      } catch (e: any) {
+          Alert.alert('Erro', e.message);
+      }
+  };
 
   const loadData = async () => {
     try {
@@ -108,7 +148,25 @@ export function HomeScreen() {
       </View>
 
       <View style={styles.actions}>
-        <Button title="Nova Transação" onPress={() => navigation.navigate('AddTransaction')} />
+        <View style={styles.actionButtonsRow}>
+            <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('AddTransaction')}>
+                <Feather name="plus" size={20} color="#fff" />
+                <Text style={styles.actionButtonText}>Nova</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#ff9800'}]} onPress={() => navigation.navigate('Payables')}>
+                <Feather name="calendar" size={20} color="#fff" />
+                <Text style={styles.actionButtonText}>Contas</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#9c27b0'}]} onPress={() => {
+                loadBudgets();
+                setBudgetModalVisible(true);
+            }}>
+                <Feather name="pie-chart" size={20} color="#fff" />
+                <Text style={styles.actionButtonText}>Orçamento</Text>
+            </TouchableOpacity>
+        </View>
       </View>
 
       <FlatList
@@ -197,19 +255,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 15, 
     marginBottom: 10, 
-    borderRadius: 8, 
-    borderWidth: 1,
-    backgroundColor: '#fff'
+    backgroundColor: '#fff', 
+    borderRadius: 8,
+    elevation: 1,
   },
+  expense: { borderLeftWidth: 5, borderLeftColor: '#c62828' },
+  income: { borderLeftWidth: 5, borderLeftColor: '#2e7d32' },
   cardContent: { flex: 1 },
-  income: { backgroundColor: '#e8f5e9', borderColor: '#c8e6c9' },
-  expense: { backgroundColor: '#ffebee', borderColor: '#ffcdd2' },
   desc: { fontSize: 16, fontWeight: 'bold' },
   category: { fontSize: 12, color: '#666', marginTop: 2 },
-  amount: { fontSize: 14, marginTop: 2 },
-  
+  amount: { fontSize: 16, marginTop: 4 },
   deleteButton: { padding: 10 },
-  deleteText: { color: '#c62828', fontWeight: 'bold', fontSize: 18 },
+  deleteText: { color: 'red', fontWeight: 'bold' },
+  empty: { textAlign: 'center', marginTop: 50, color: '#999' },
   
-  empty: { textAlign: 'center', marginTop: 20, color: '#666' },
+  actionButtonsRow: { flexDirection: 'row', justifyContent: 'space-around' },
+  actionButton: { 
+      backgroundColor: '#2196F3', 
+      paddingVertical: 10, 
+      paddingHorizontal: 20, 
+      borderRadius: 8, 
+      flexDirection: 'row', 
+      alignItems: 'center',
+      minWidth: 100,
+      justifyContent: 'center'
+  },
+  actionButtonText: { color: '#fff', marginLeft: 8, fontWeight: 'bold' },
+
+  modalContainer: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 20 },
+  modalContent: { backgroundColor: '#fff', padding: 20, borderRadius: 10, maxHeight: '80%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold' },
+  budgetRow: { marginBottom: 20 },
+  budgetInfo: { marginBottom: 5 },
+  budgetCategory: { fontWeight: 'bold', fontSize: 16 },
+  budgetValues: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 },
+  budgetSpent: { color: '#666' },
+  budgetInputContainer: { flexDirection: 'row', alignItems: 'center' },
+  budgetInput: { borderBottomWidth: 1, borderColor: '#ccc', width: 60, textAlign: 'center', padding: 0 },
+  progressBarBg: { height: 10, backgroundColor: '#eee', borderRadius: 5, overflow: 'hidden' },
+  progressBarFill: { height: '100%' },
 });

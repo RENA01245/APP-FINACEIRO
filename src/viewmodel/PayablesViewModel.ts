@@ -3,6 +3,7 @@ import { GetPendingPayables } from '../usecase/payables/GetPendingPayables';
 import { PayAccount } from '../usecase/payables/PayAccount';
 import { GetSession } from '../usecase/auth/GetSession';
 import { Payable } from '../model/Payable';
+import { NotificationService } from '../infra/services/NotificationService';
 
 export class PayablesViewModel {
   private addUseCase = new AddPayable();
@@ -33,6 +34,20 @@ export class PayablesViewModel {
       due_date: date.toISOString(),
       status: 'pending'
     });
+
+    // Schedule notification for 9:00 AM on due date
+    const triggerDate = new Date(date);
+    triggerDate.setHours(9, 0, 0, 0);
+    
+    // If 9 AM has passed, schedule for next day or just don't schedule? 
+    // Actually, if it's today and past 9 AM, it might trigger immediately or fail.
+    // The service handles "past date" check, so we are safe.
+    
+    await NotificationService.scheduleNotification(
+      'Conta a Pagar',
+      `Lembrete: Pagar ${description} no valor de R$ ${value.toFixed(2)}`,
+      triggerDate
+    );
   }
 
   async pay(payable: Payable) {

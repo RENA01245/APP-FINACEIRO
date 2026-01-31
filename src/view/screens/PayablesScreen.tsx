@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, Button, TextInput, Alert, TouchableOpacity, Modal } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-// import DateTimePicker from '@react-native-community/datetimepicker';
+
+import { NotificationService } from '../../infra/services/NotificationService';
 import { PayablesViewModel } from '../../viewmodel/PayablesViewModel';
 import { Payable } from '../../model/Payable';
 import { Feather } from '@expo/vector-icons';
@@ -14,8 +15,7 @@ export function PayablesScreen() {
   // Form state
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [dateStr, setDateStr] = useState('');
   const [loading, setLoading] = useState(false);
 
   const loadData = async () => {
@@ -30,17 +30,41 @@ export function PayablesScreen() {
   useFocusEffect(
     useCallback(() => {
       loadData();
+      NotificationService.requestPermissions();
     }, [])
   );
+  
+  const handleDateChange = (text: string) => {
+    // Remove tudo que não é número
+    let cleanText = text.replace(/\D/g, '');
+    
+    // Adiciona as barras automaticamente
+    if (cleanText.length >= 2) {
+      cleanText = cleanText.substring(0, 2) + '/' + cleanText.substring(2);
+    }
+    if (cleanText.length >= 5) {
+      cleanText = cleanText.substring(0, 5) + '/' + cleanText.substring(5, 9);
+    }
+
+    setDateStr(cleanText);
+  };
 
   const handleAdd = async () => {
     try {
+      if (!dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+        Alert.alert('Erro', 'Data inválida. Use o formato DD/MM/AAAA');
+        return;
+      }
+      
+      const [day, month, year] = dateStr.split('/').map(Number);
+      const dateObj = new Date(year, month - 1, day);
+      
       setLoading(true);
-      await viewModel.add(description, amount, date);
+      await viewModel.add(description, amount, dateObj);
       setModalVisible(false);
       setDescription('');
       setAmount('');
-      setDate(new Date());
+      setDateStr('');
       loadData();
       Alert.alert('Sucesso', 'Conta agendada com sucesso!');
     } catch (e: any) {
@@ -72,12 +96,7 @@ export function PayablesScreen() {
     );
   };
 
-  const onDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(false);
-    if (selectedDate) {
-      setDate(selectedDate);
-    }
-  };
+
 
   const renderItem = ({ item }: { item: Payable }) => (
     <View style={styles.card}>
@@ -128,19 +147,14 @@ export function PayablesScreen() {
               onChangeText={setAmount}
             />
 
-            <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateButton}>
-              <Text>Vencimento: {date.toLocaleDateString('pt-BR')}</Text>
-            </TouchableOpacity>
-
-            {/* {showDatePicker && (
-              <DateTimePicker
-                value={date}
-                mode="date"
-                display="default"
-                onChange={onDateChange}
-                minimumDate={new Date()}
-              />
-            )} */}
+            <TextInput
+              style={styles.input}
+              placeholder="Vencimento (DD/MM/AAAA)"
+              value={dateStr}
+              onChangeText={handleDateChange}
+              keyboardType="numeric"
+              maxLength={10}
+            />
 
             <View style={styles.modalButtons}>
               <Button title="Cancelar" color="red" onPress={() => setModalVisible(false)} />
