@@ -5,5 +5,6 @@ export interface Transaction {
   description: string;
   type: 'income' | 'expense';
   category?: string;
+  isRecurring?: boolean;
   created_at?: string;
 }

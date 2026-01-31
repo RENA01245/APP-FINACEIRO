@@ -5,6 +5,7 @@ import { Session } from '@supabase/supabase-js';
 import { LoginScreen } from '../view/screens/LoginScreen';
 import { HomeScreen } from '../view/screens/HomeScreen';
 import { AddTransactionScreen } from '../view/screens/AddTransactionScreen';
+import { PayablesScreen } from '../view/screens/PayablesScreen';
 import { ObserveAuthState } from '../usecase/auth/ObserveAuthState';
 import { View, ActivityIndicator } from 'react-native';
 
@@ -43,6 +44,7 @@ export function RootNavigator() {
           <>
             <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Minhas Finanças' }} />
             <Stack.Screen name="AddTransaction" component={AddTransactionScreen} options={{ title: 'Nova Transação' }} />
+            <Stack.Screen name="Payables" component={PayablesScreen} options={{ title: 'Contas a Pagar' }} />
           </>
         )}
       </Stack.Navigator>

@@ -27,7 +27,7 @@ export class AddTransactionViewModel {
     return value;
   }
 
-  async add(amount: string, description: string, type: 'income' | 'expense', category: string) {
+  async add(amount: string, description: string, type: 'income' | 'expense', category: string, isRecurring: boolean) {
     const session = await this.getSessionUseCase.execute();
     if (!session?.user) throw new Error('Usuário não autenticado');
 
@@ -39,10 +39,11 @@ export class AddTransactionViewModel {
       description,
       type,
       category,
+      isRecurring,
     });
   }
 
-  async update(id: string, amount: string, description: string, type: 'income' | 'expense', category: string) {
+  async update(id: string, amount: string, description: string, type: 'income' | 'expense', category: string, isRecurring: boolean) {
     const session = await this.getSessionUseCase.execute();
     if (!session?.user) throw new Error('Usuário não autenticado');
 
@@ -55,6 +56,7 @@ export class AddTransactionViewModel {
       description,
       type,
       category,
+      isRecurring,
     });
   }
 }

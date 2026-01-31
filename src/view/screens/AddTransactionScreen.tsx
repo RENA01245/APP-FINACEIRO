@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TextInput, Button, StyleSheet, Alert, Text, TouchableOpacity } from 'react-native';
+import { View, TextInput, Button, StyleSheet, Alert, Text, TouchableOpacity, Switch } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { AddTransactionViewModel } from '../../viewmodel/AddTransactionViewModel';
 
@@ -12,6 +12,7 @@ export function AddTransactionScreen() {
   const [description, setDescription] = useState(transaction ? transaction.description : '');
   const [type, setType] = useState<'income' | 'expense'>(transaction ? transaction.type : 'expense');
   const [category, setCategory] = useState(transaction ? transaction.category : '');
+  const [isRecurring, setIsRecurring] = useState(transaction ? transaction.isRecurring : false);
   const [loading, setLoading] = useState(false);
 
   const viewModel = new AddTransactionViewModel();
@@ -22,9 +23,9 @@ export function AddTransactionScreen() {
     try {
       setLoading(true);
       if (transaction && transaction.id) {
-        await viewModel.update(transaction.id, amount, description, type, category);
+        await viewModel.update(transaction.id, amount, description, type, category, isRecurring);
       } else {
-        await viewModel.add(amount, description, type, category);
+        await viewModel.add(amount, description, type, category, isRecurring);
       }
       navigation.goBack();
     } catch (e: any) {
@@ -101,4 +102,5 @@ const styles = StyleSheet.create({
   activeCategory: { backgroundColor: '#2196F3', borderColor: '#2196F3' },
   categoryText: { color: '#333' },
   activeCategoryText: { color: '#fff', fontWeight: 'bold' },
+  switchContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
 });

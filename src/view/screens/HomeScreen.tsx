@@ -19,6 +19,9 @@ export function HomeScreen() {
 
   const loadData = async () => {
     try {
+      // Check for recurring transactions (only once per session technically, but safe to check here)
+      await homeViewModel.checkRecurring();
+      
       const data = await homeViewModel.getTransactions();
       setTransactions(data);
       setSummary(homeViewModel.calculateSummary(data));
@@ -139,7 +142,10 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: '#f5f5f5' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, marginTop: 20 },
   title: { fontSize: 24, fontWeight: 'bold' },
-  
+  iconButton: {
+    padding: 8,
+    marginRight: 5,
+  },
   monthControl: {
     flexDirection: 'row',
     justifyContent: 'center',
