@@ -1,2 +1,0 @@
-# APP-FINACEIRO
-Meu Financeiro
