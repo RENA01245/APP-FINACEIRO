@@ -7,6 +7,8 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { AddTransactionViewModel } from '../../viewmodel/AddTransactionViewModel';
+import { CategoryViewModel } from '../../viewmodel/CategoryViewModel';
+import { Category } from '../../model/Category';
 import { theme } from '../../design/theme';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { CustomInput } from '../components/CustomInput';
@@ -24,10 +26,26 @@ export function AddTransactionScreen() {
   const [date, setDate] = useState(transaction?.created_at ? new Date(transaction.created_at) : new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const viewModel = new AddTransactionViewModel();
+  const [categoryViewModel] = useState(() => new CategoryViewModel());
 
-  const categories = ['Alimentação', 'Transporte', 'Moradia', 'Lazer', 'Saúde', 'Outros'];
+  const loadCategories = async () => {
+    try {
+      const data = await categoryViewModel.getCategories();
+      setCategories(data);
+      if (!category && data.length > 0) {
+        // setCategory(data[0].name); // Don't auto-select if we want user to choose
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  React.useEffect(() => {
+    loadCategories();
+  }, []);
 
   const handleSave = async () => {
     if (!amount || !description || !category) {
@@ -111,22 +129,28 @@ export function AddTransactionScreen() {
             icon="file-text"
           />
 
-          <Text style={styles.label}>Categoria</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, marginBottom: 10 }}>
+            <Text style={styles.label}>Categoria</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Categories')}>
+              <Text style={{ color: theme.colors.primary, fontSize: 12, fontWeight: 'bold' }}>Configurar</Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.categoriesGrid}>
-            {categories.map((cat) => (
+            {categories.map((cat, idx) => (
               <TouchableOpacity
-                key={cat}
-                style={[styles.categoryCard, category === cat && styles.categoryCardActive]}
-                onPress={() => setCategory(cat)}
+                key={cat.id || `cat-${idx}`}
+                style={[styles.categoryCard, category === cat.name && styles.categoryCardActive]}
+                onPress={() => setCategory(cat.name)}
               >
-                <View style={[styles.catIcon, category === cat && { backgroundColor: theme.colors.primary }]}>
+                <View style={[styles.catIcon, category === cat.name && { backgroundColor: theme.colors.primary }]}>
                   <Feather
-                    name={cat === 'Alimentação' ? 'coffee' : cat === 'Transporte' ? 'truck' : 'grid'}
+                    name={cat.icon as any}
                     size={20}
-                    color={category === cat ? '#FFF' : theme.colors.textSecondary}
+                    color={category === cat.name ? '#FFF' : theme.colors.textSecondary}
                   />
                 </View>
-                <Text style={[styles.categoryText, category === cat && styles.categoryTextActive]}>{cat}</Text>
+                <Text style={[styles.categoryText, category === cat.name && styles.categoryTextActive]}>{cat.name}</Text>
               </TouchableOpacity>
             ))}
           </View>

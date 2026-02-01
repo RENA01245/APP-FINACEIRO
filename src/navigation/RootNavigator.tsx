@@ -15,6 +15,7 @@ import { AddTransactionScreen } from '../view/screens/AddTransactionScreen';
 import { PayablesScreen } from '../view/screens/PayablesScreen';
 import { ReportsScreen } from '../view/screens/ReportsScreen';
 import { BudgetsScreen } from '../view/screens/BudgetsScreen';
+import { CategoriesScreen } from '../view/screens/CategoriesScreen';
 import { ObserveAuthState } from '../usecase/auth/ObserveAuthState';
 import { theme } from '../design/theme';
 
@@ -180,6 +181,11 @@ export function RootNavigator() {
                 presentation: 'modal',
                 animation: 'slide_from_bottom'
               }}
+            />
+            <Stack.Screen
+              name="Categories"
+              component={CategoriesScreen}
+              options={{ headerShown: false }}
             />
           </>
         )}
