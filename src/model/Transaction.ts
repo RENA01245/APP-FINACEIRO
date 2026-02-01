@@ -6,5 +6,7 @@ export interface Transaction {
   type: 'income' | 'expense';
   category?: string;
   isRecurring?: boolean;
+  payment_method?: 'cash' | 'credit_card';
+  card_id?: string;
   created_at?: string;
 }

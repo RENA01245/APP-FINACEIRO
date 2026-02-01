@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { View, TextInput, StyleSheet, Alert, Text, TouchableOpacity, Switch, Platform, ScrollView, StatusBar } from 'react-native';
+import { View, TextInput, StyleSheet, Alert, Text, TouchableOpacity, Switch, Platform, ScrollView, StatusBar, FlatList } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { AddTransactionViewModel } from '../../viewmodel/AddTransactionViewModel';
 import { CategoryViewModel } from '../../viewmodel/CategoryViewModel';
+import { CardViewModel } from '../../viewmodel/CardViewModel';
 import { Category } from '../../model/Category';
 import { theme } from '../../design/theme';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -27,16 +28,25 @@ export function AddTransactionScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit_card'>(transaction ? transaction.payment_method : 'cash');
+  const [cardId, setCardId] = useState(transaction ? transaction.card_id : '');
+  const [cards, setCards] = useState<any[]>([]);
 
   const viewModel = new AddTransactionViewModel();
   const [categoryViewModel] = useState(() => new CategoryViewModel());
+  const [cardViewModel] = useState(() => new CardViewModel());
 
-  const loadCategories = async () => {
+  const loadData = async () => {
     try {
-      const data = await categoryViewModel.getCategories();
-      setCategories(data);
-      if (!category && data.length > 0) {
-        // setCategory(data[0].name); // Don't auto-select if we want user to choose
+      const [cats, cardList] = await Promise.all([
+        categoryViewModel.getCategories(),
+        cardViewModel.getCards()
+      ]);
+      setCategories(cats);
+      setCards(cardList);
+
+      if (!cardId && cardList.length > 0) {
+        setCardId(cardList[0].id);
       }
     } catch (e) {
       console.error(e);
@@ -44,7 +54,7 @@ export function AddTransactionScreen() {
   };
 
   React.useEffect(() => {
-    loadCategories();
+    loadData();
   }, []);
 
   const handleSave = async () => {
@@ -56,9 +66,9 @@ export function AddTransactionScreen() {
     try {
       setLoading(true);
       if (transaction && transaction.id) {
-        await viewModel.update(transaction.id, amount, description, type, category, isRecurring, date);
+        await viewModel.update(transaction.id, amount, description, type, category, isRecurring, date, paymentMethod, paymentMethod === 'credit_card' ? cardId : undefined);
       } else {
-        await viewModel.add(amount, description, type, category, isRecurring, date);
+        await viewModel.add(amount, description, type, category, isRecurring, date, paymentMethod, paymentMethod === 'credit_card' ? cardId : undefined);
       }
       navigation.goBack();
     } catch (e: any) {
@@ -178,6 +188,61 @@ export function AddTransactionScreen() {
             </View>
           </View>
 
+          {!isIncome && (
+            <View style={{ marginTop: 20 }}>
+              <Text style={styles.label}>Forma de Pagamento</Text>
+              <View style={styles.typeSelector}>
+                <TouchableOpacity
+                  style={[styles.typeButton, paymentMethod === 'cash' && styles.typeButtonActive]}
+                  onPress={() => setPaymentMethod('cash')}
+                >
+                  <Feather name="dollar-sign" size={18} color={paymentMethod === 'cash' ? theme.colors.primary : theme.colors.textSecondary} />
+                  <Text style={[styles.typeText, { color: paymentMethod === 'cash' ? theme.colors.primary : theme.colors.textSecondary }]}>Dinheiro</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.typeButton, paymentMethod === 'credit_card' && styles.typeButtonActive]}
+                  onPress={() => setPaymentMethod('credit_card')}
+                >
+                  <Feather name="credit-card" size={18} color={paymentMethod === 'credit_card' ? theme.colors.primary : theme.colors.textSecondary} />
+                  <Text style={[styles.typeText, { color: paymentMethod === 'credit_card' ? theme.colors.primary : theme.colors.textSecondary }]}>Cartão</Text>
+                </TouchableOpacity>
+              </View>
+
+              {paymentMethod === 'credit_card' && (
+                <View style={{ marginTop: 15 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <Text style={[styles.label, { marginTop: 0 }]}>Selecionar Cartão</Text>
+                    <TouchableOpacity onPress={() => navigation.navigate('Cards')}>
+                      <Text style={{ color: theme.colors.primary, fontSize: 12, fontWeight: 'bold' }}>Gerenciar</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {cards.length > 0 ? (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
+                      {cards.map(card => (
+                        <TouchableOpacity
+                          key={card.id}
+                          style={[
+                            styles.miniCard,
+                            { backgroundColor: card.color + '20', borderColor: card.color },
+                            cardId === card.id && { backgroundColor: card.color, borderWidth: 0 }
+                          ]}
+                          onPress={() => setCardId(card.id)}
+                        >
+                          <Text style={[styles.miniCardText, cardId === card.id && { color: '#FFF' }]}>{card.name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  ) : (
+                    <TouchableOpacity style={styles.errorContainer} onPress={() => navigation.navigate('Cards')}>
+                      <Text style={styles.errorText}>Nenhum cartão cadastrado. Toque para adicionar.</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+            </View>
+          )}
+
           {showDatePicker && (
             <DateTimePicker
               value={date}
@@ -266,5 +331,18 @@ const styles = StyleSheet.create({
   },
   switchLabel: { fontWeight: 'bold', color: theme.colors.textPrimary },
 
-  footer: { marginBottom: 30 }
+  footer: { marginBottom: 30 },
+
+  miniCard: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginRight: 10,
+    minWidth: 80,
+    alignItems: 'center'
+  },
+  miniCardText: { fontSize: 13, fontWeight: 'bold', color: theme.colors.textPrimary },
+  errorContainer: { padding: 15, backgroundColor: '#FFF5F5', borderRadius: 12, borderWidth: 1, borderColor: '#FED7D7' },
+  errorText: { color: '#C53030', fontSize: 13, textAlign: 'center' }
 });

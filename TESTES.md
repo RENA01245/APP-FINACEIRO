@@ -17,10 +17,9 @@ Focamos nas regras críticas de negócio, isoladas da UI e de frameworks externo
 
 ### 2. ViewModels (Lógica de Apresentação)
 Testamos a camada que conecta a View aos UseCases.
-- **AuthViewModel**:
-  - Fluxo de Login (chamada correta ao usecase).
-  - Fluxo de Logout.
-  - Tratamento de erros de validação.
+- **AuthViewModel**: Fluxo de Login, Logout e validações.
+- **CategoryViewModel**: Lógica de CRUD de categorias e integração com Supabase.
+- **CardViewModel**: Sugestão de limite e cálculo de faturas.
 
 ### 3. Navegação (Integração)
 Testamos o fluxo de decisão de rotas baseado no estado de autenticação.
@@ -66,10 +65,9 @@ Os testes estão localizados na pasta `src/__tests__/`, espelhando a estrutura o
 ```
 src/
   __tests__/
-    ├── AddTransaction.usecase.test.ts  # Teste Unitário (Regra de Negócio)
-    ├── AuthViewModel.test.ts           # Teste Unitário (ViewModel)
-    ├── DeleteConfirm.test.tsx          # Teste de UI (Componente)
-    └── RootNavigator.test.tsx          # Teste de Integração (Navegação)
+    ├── AddTransaction.usecase.test.ts
+    ├── AuthViewModel.test.ts
+    └── CategoryViewModel.test.ts
 ```
 
 ## 📝 Exemplos do que os testes garantem

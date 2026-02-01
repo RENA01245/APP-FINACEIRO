@@ -4,6 +4,8 @@ import { DeleteTransaction } from '../usecase/transactions/DeleteTransaction';
 import { GetTransactionsByMonth } from '../usecase/transactions/GetTransactionsByMonth';
 import { ProcessRecurringTransactions } from '../usecase/transactions/ProcessRecurringTransactions';
 import { GetSession } from '../usecase/auth/GetSession';
+import { CardViewModel } from './CardViewModel';
+import { CreditCard } from '../model/CreditCard';
 
 export class HomeViewModel {
   private repo: TransactionRepositorySupabase;
@@ -11,7 +13,8 @@ export class HomeViewModel {
   private getByMonthUseCase: GetTransactionsByMonth;
   private processRecurringUseCase: ProcessRecurringTransactions;
   private getSessionUseCase: GetSession;
-  
+  private cardViewModel: CardViewModel;
+
   public currentDate: Date;
 
   constructor() {
@@ -20,6 +23,7 @@ export class HomeViewModel {
     this.getByMonthUseCase = new GetTransactionsByMonth();
     this.processRecurringUseCase = new ProcessRecurringTransactions();
     this.getSessionUseCase = new GetSession();
+    this.cardViewModel = new CardViewModel();
     this.currentDate = new Date();
   }
 
@@ -74,5 +78,14 @@ export class HomeViewModel {
       expense,
       total: income - expense
     };
+  }
+
+  async getCardSummaries(): Promise<{ card: CreditCard, invoice: number }[]> {
+    const cards = await this.cardViewModel.getCards();
+    const summaries = await Promise.all(cards.map(async (card) => {
+      const invoice = await this.cardViewModel.getCardInvoice(card.id!, this.currentDate);
+      return { card, invoice };
+    }));
+    return summaries;
   }
 }

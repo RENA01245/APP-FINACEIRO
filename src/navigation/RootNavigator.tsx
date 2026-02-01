@@ -16,6 +16,7 @@ import { PayablesScreen } from '../view/screens/PayablesScreen';
 import { ReportsScreen } from '../view/screens/ReportsScreen';
 import { BudgetsScreen } from '../view/screens/BudgetsScreen';
 import { CategoriesScreen } from '../view/screens/CategoriesScreen';
+import { CardsScreen } from '../view/screens/CardsScreen';
 import { ObserveAuthState } from '../usecase/auth/ObserveAuthState';
 import { theme } from '../design/theme';
 
@@ -185,6 +186,11 @@ export function RootNavigator() {
             <Stack.Screen
               name="Categories"
               component={CategoriesScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="Cards"
+              component={CardsScreen}
               options={{ headerShown: false }}
             />
           </>

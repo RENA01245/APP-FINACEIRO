@@ -30,7 +30,12 @@ O aplicativo segue um fluxo linear e seguro:
     - Não existe modo "visitante" (offline-first sem conta) para garantir a segurança e backup dos dados na nuvem.
 
 3.  **Navegação Principal (Home)**:
-    - A tela inicial é o "Dashboard", apresentando resumo do mês, lista de últimas transações e acesso rápido às funcionalidades (Nova Transação, Contas, Metas, Relatórios).
+    - O aplicativo utiliza um **Bottom Tab Navigator** para acesso rápido:
+        - 🏠 **Home**: Resumo financeiro e últimas transações.
+        - 📅 **Contas**: Gestão de contas a pagar.
+        - ➕ **Nova**: Botão central flutuante para registro rápido.
+        - 🎯 **Metas**: Controle de orçamentos por categoria.
+        - 📊 **Relatórios**: Análise visual de gastos.
 
 ---
 
@@ -94,18 +99,34 @@ O sistema realiza cálculos em tempo real no dispositivo (Client-side calculatio
 
 ---
 
-## 7. Categorias
+## 7. Categorias Dinâmicas
 
-As categorias são fixas para garantir padronização nos relatórios:
+Diferente de sistemas rígidos, o app permite total personalização:
 
-- 🍔 **Alimentação**
-- 🚌 **Transporte**
-- 🎭 **Lazer**
-- 💡 **Contas** (Energia, Água, Internet, etc.)
-- 🏥 **Saúde**
-- 📦 **Outros**
+- **Categorias Padrão**: O sistema inicia com categorias essenciais (Alimentação, Transporte, Lazer, etc).
+- **Customização**: O usuário pode criar suas próprias categorias, escolhendo:
+    - **Nome** único.
+    - **Ícone** representativo (biblioteca Feather).
+    - **Cor** para identificação visual rápida.
+- **Gestão**: Acesso via tela de transações para adicionar ou remover categorias personalizadas.
 
-> Ao pagar uma "Conta a Pagar", ela é automaticamente categorizada como **Contas**.
+---
+
+## 8. Controle de Cartão de Crédito 💳
+
+Módulo avançado para gestão de gastos em cartões:
+
+- **Cadastro de Cartões**: Permite registrar múltiplos cartões com:
+    - Nome (apelido).
+    - Limite Total.
+    - Dia de Fechamento e Dia de Vencimento.
+    - Cor personalizada (para simular a cor real do cartão).
+- **Fluxo de Compra**:
+    - Ao registrar uma despesa, o usuário escolhe entre **Dinheiro** ou **Cartão**.
+    - Se escolher Cartão, seleciona qual dos cartões cadastrados foi utilizado.
+- **Dashboard de Faturas**:
+    - Visualização na Home de quanto do limite de cada cartão já foi consumido no mês atual.
+    - Barra de progresso visual para cada fatura.
 
 ---
 
@@ -142,11 +163,9 @@ O app utiliza o sistema de notificações locais do dispositivo (Expo Notificati
 
 ---
 
-## 11. Regras Importantes do Sistema
-
-1.  **Imutabilidade de Histórico**: Não é possível alterar o log de "data de criação" original do registro no banco (apenas a data de referência da transação).
-2.  **Proteção de Exclusão**: Categorias não podem ser excluídas pelo usuário.
-3.  **Consistência de Data**: Ao pagar uma conta com data retroativa, ela aparecerá no mês correspondente àquela data, não necessariamente no mês atual.
+1.  **Imutabilidade de Histórico**: Não é possível alterar o log de "data de criação" original (apenas a data de referência).
+2.  **Proteção de Exclusão**: Categorias só podem ser excluídas se não houver transações vinculadas a elas (em desenvolvimento).
+3.  **Cálculo de Fatura**: A fatura do cartão é calculada baseada na data da transação e no dia de fechamento do cartão cadastrado.
 
 ---
 
@@ -183,7 +202,8 @@ npm start
 
 Funcionalidades mapeadas para o roadmap futuro:
 
+- [x] **Categorias Dinâmicas**: Sistema de categorias personalizáveis.
+- [x] **Controle de Cartão**: Gestão de faturas e limites.
 - [ ] **Exportação**: Gerar relatórios em PDF/Excel.
 - [ ] **Modo Offline**: Sincronização automática quando a internet voltar.
-- [ ] **Recorrência no Servidor**: Migrar a lógica de transações recorrentes para o backend (Supabase Edge Functions).
 - [ ] **Múltiplas Carteiras**: Gerenciar saldo de contas bancárias separadas.

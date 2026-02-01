@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, Alert, TouchableOpacity, StatusBar, ScrollView } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -31,6 +31,7 @@ export function HomeScreen() {
 
   const [budgetStatus, setBudgetStatus] = useState<{ category: string, budget: number, spent: number }[]>([]);
   const [upcomingPayables, setUpcomingPayables] = useState<Payable[]>([]);
+  const [cardSummaries, setCardSummaries] = useState<{ card: any, invoice: number }[]>([]);
 
   const loadData = async () => {
     try {
@@ -47,6 +48,9 @@ export function HomeScreen() {
       setTransactions(data);
       setSummary(homeViewModel.calculateSummary(data));
       setMonthLabel(homeViewModel.getCurrentMonthLabel());
+
+      const cards = await homeViewModel.getCardSummaries();
+      setCardSummaries(cards);
     } catch (error: any) {
       Alert.alert('Erro', error.message);
     }
@@ -139,6 +143,41 @@ export function HomeScreen() {
           </View>
         </View>
       </Card>
+
+      {/* Credit Card Section */}
+      {cardSummaries.length > 0 && (
+        <View style={styles.sectionContainer}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <Text style={styles.sectionTitle}>Faturas do Cartão</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Cards')}>
+              <Text style={styles.seeAll}>Gerenciar</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
+            {cardSummaries.map((item, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[styles.cardInvoiceItem, { borderLeftColor: item.card.color }]}
+                onPress={() => navigation.navigate('Cards')}
+              >
+                <Text style={styles.cardInvoiceName}>{item.card.name}</Text>
+                <Text style={styles.cardInvoiceAmount}>R$ {item.invoice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</Text>
+                <View style={styles.limitBarBackground}>
+                  <View
+                    style={[
+                      styles.limitBarForeground,
+                      {
+                        backgroundColor: item.card.color,
+                        width: `${Math.min((item.invoice / item.card.limit_amount) * 100, 100)}%`
+                      }
+                    ]}
+                  />
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Notifications / Payables Preview */}
       {upcomingPayables.length > 0 && (
@@ -266,4 +305,19 @@ const styles = StyleSheet.create({
   payableAlertTitle: { fontWeight: '600', color: theme.colors.textPrimary },
   payableAlertDate: { fontSize: 12, color: theme.colors.textSecondary },
   payableAlertAmount: { fontWeight: 'bold' },
+
+  cardInvoiceItem: {
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 16,
+    marginRight: 15,
+    minWidth: 160,
+    borderLeftWidth: 4,
+    ...theme.shadows.soft,
+    marginBottom: 5
+  },
+  cardInvoiceName: { fontSize: 13, color: theme.colors.textSecondary, marginBottom: 4 },
+  cardInvoiceAmount: { fontSize: 18, fontWeight: 'bold', color: theme.colors.textPrimary, marginBottom: 10 },
+  limitBarBackground: { height: 4, backgroundColor: theme.colors.border, borderRadius: 2, overflow: 'hidden' },
+  limitBarForeground: { height: '100%' },
 });

@@ -11,7 +11,9 @@ export class TransactionRepositorySupabase {
         description: transaction.description,
         type: transaction.type,
         category: transaction.category,
-        is_recurring: transaction.isRecurring || false
+        is_recurring: transaction.isRecurring || false,
+        payment_method: transaction.payment_method || 'cash',
+        card_id: transaction.card_id
       });
 
     if (error) {
@@ -47,7 +49,9 @@ export class TransactionRepositorySupabase {
     }
     return (data || []).map((item: any) => ({
       ...item,
-      isRecurring: item.is_recurring
+      isRecurring: item.is_recurring,
+      payment_method: item.payment_method,
+      card_id: item.card_id
     })) as Transaction[];
   }
 
@@ -62,6 +66,8 @@ export class TransactionRepositorySupabase {
         type: transaction.type,
         category: transaction.category,
         is_recurring: transaction.isRecurring,
+        payment_method: transaction.payment_method,
+        card_id: transaction.card_id,
         created_at: transaction.created_at // Allow updating the date
       })
       .eq('id', transaction.id);
@@ -96,7 +102,7 @@ export class TransactionRepositorySupabase {
     if (error) {
       throw new Error(error.message);
     }
-    
+
     return count || 0;
   }
 
@@ -111,7 +117,7 @@ export class TransactionRepositorySupabase {
     if (error) {
       throw new Error(error.message);
     }
-    
+
     // Map database field to model
     return (data || []).map((item: any) => ({
       ...item,
