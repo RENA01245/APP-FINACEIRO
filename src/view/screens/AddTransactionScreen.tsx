@@ -1,11 +1,18 @@
+
 import React, { useState } from 'react';
-import { View, TextInput, Button, StyleSheet, Alert, Text, TouchableOpacity, Switch, Platform } from 'react-native';
+import { View, TextInput, StyleSheet, Alert, Text, TouchableOpacity, Switch, Platform, ScrollView, StatusBar } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+
 import { AddTransactionViewModel } from '../../viewmodel/AddTransactionViewModel';
+import { theme } from '../../design/theme';
+import { PrimaryButton } from '../components/PrimaryButton';
+import { CustomInput } from '../components/CustomInput';
 
 export function AddTransactionScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const transaction = route.params?.transaction;
 
@@ -23,6 +30,11 @@ export function AddTransactionScreen() {
   const categories = ['Alimentação', 'Transporte', 'Moradia', 'Lazer', 'Saúde', 'Outros'];
 
   const handleSave = async () => {
+    if (!amount || !description || !category) {
+      Alert.alert('Ops', 'Por favor, preencha valor, descrição e categoria.');
+      return;
+    }
+
     try {
       setLoading(true);
       if (transaction && transaction.id) {
@@ -38,94 +50,197 @@ export function AddTransactionScreen() {
     }
   };
 
+  const isIncome = type === 'income';
+  const headerColors = isIncome ? theme.colors.gradientSecondary : theme.colors.gradientPrimary;
+  // If expense, maybe use a reddish gradient or keep primary blue for neutral. 
+  // Let's use Red for expense to be clear.
+  const expenseGradient = ['#c62828', '#e53935'] as const;
+  const activeGradient = isIncome ? theme.colors.gradientSecondary : expenseGradient;
+
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Data</Text>
-      <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
-        <Text>{date.toLocaleDateString()}</Text>
-      </TouchableOpacity>
-      {showDatePicker && (
-        <DateTimePicker
-          value={date}
-          mode="date"
-          display="default"
-          maximumDate={new Date()}
-          onChange={(event, selectedDate) => {
-            setShowDatePicker(false);
-            if (selectedDate) setDate(selectedDate);
-          }}
-        />
-      )}
-
-      <View style={styles.switchContainer}>
-        <Text style={styles.label}>Recorrente</Text>
-        <Switch value={isRecurring} onValueChange={setIsRecurring} />
-      </View>
-
-      <Text style={styles.label}>Valor</Text>
-      <TextInput
-        style={styles.input}
-        keyboardType="numeric"
-        value={amount}
-        onChangeText={setAmount}
-        placeholder="0.00"
-      />
-
-      <Text style={styles.label}>Descrição</Text>
-      <TextInput
-        style={styles.input}
-        value={description}
-        onChangeText={setDescription}
-        placeholder="Ex: Mercado"
-      />
-
-      <View style={styles.typeContainer}>
-        <TouchableOpacity
-          style={[styles.typeButton, type === 'income' && styles.activeIncome]}
-          onPress={() => setType('income')}
-        >
-          <Text style={styles.typeText}>Receita</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.typeButton, type === 'expense' && styles.activeExpense]}
-          onPress={() => setType('expense')}
-        >
-          <Text style={styles.typeText}>Despesa</Text>
-        </TouchableOpacity>
-      </View>
-
-      <Text style={styles.label}>Categoria</Text>
-      <View style={styles.categoriesContainer}>
-        {categories.map((cat) => (
-          <TouchableOpacity
-            key={cat}
-            style={[styles.categoryButton, category === cat && styles.activeCategory]}
-            onPress={() => setCategory(cat)}
-          >
-            <Text style={[styles.categoryText, category === cat && styles.activeCategoryText]}>{cat}</Text>
+      <StatusBar barStyle="light-content" />
+      <LinearGradient colors={activeGradient} style={styles.header}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Feather name="arrow-left" size={24} color="#FFF" />
           </TouchableOpacity>
-        ))}
-      </View>
+          <Text style={styles.headerTitle}>{transaction ? 'Editar Transação' : 'Nova Transação'}</Text>
+          <View style={{ width: 24 }} />
+        </View>
 
-      <Button title={loading ? "Salvando..." : "Salvar"} onPress={handleSave} disabled={loading} />
+        <View style={styles.amountContainer}>
+          <Text style={styles.currencyPrefix}>R$</Text>
+          <TextInput
+            style={styles.amountInput}
+            value={amount}
+            onChangeText={setAmount}
+            keyboardType="numeric"
+            placeholder="0.00"
+            placeholderTextColor="rgba(255,255,255,0.6)"
+            cursorColor="#FFF"
+            autoFocus={!transaction}
+          />
+        </View>
+
+        <View style={styles.typeSelector}>
+          <TouchableOpacity
+            style={[styles.typeButton, isIncome && styles.typeButtonActive]}
+            onPress={() => setType('income')}
+          >
+            <Feather name="arrow-up-circle" size={20} color={isIncome ? theme.colors.secondary : 'rgba(255,255,255,0.7)'} />
+            <Text style={[styles.typeText, isIncome ? { color: theme.colors.secondary } : { color: '#FFF' }]}>Receita</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.typeButton, !isIncome && styles.typeButtonActive]}
+            onPress={() => setType('expense')}
+          >
+            <Feather name="arrow-down-circle" size={20} color={!isIncome ? theme.colors.danger : 'rgba(255,255,255,0.7)'} />
+            <Text style={[styles.typeText, !isIncome ? { color: theme.colors.danger } : { color: '#FFF' }]}>Despesa</Text>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+
+      <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.inputGroup}>
+          <CustomInput
+            label="Descrição"
+            placeholder="Ex: Supermercado"
+            value={description}
+            onChangeText={setDescription}
+            icon="file-text"
+          />
+
+          <Text style={styles.label}>Categoria</Text>
+          <View style={styles.categoriesGrid}>
+            {categories.map((cat) => (
+              <TouchableOpacity
+                key={cat}
+                style={[styles.categoryCard, category === cat && styles.categoryCardActive]}
+                onPress={() => setCategory(cat)}
+              >
+                <View style={[styles.catIcon, category === cat && { backgroundColor: theme.colors.primary }]}>
+                  <Feather
+                    name={cat === 'Alimentação' ? 'coffee' : cat === 'Transporte' ? 'truck' : 'grid'}
+                    size={20}
+                    color={category === cat ? '#FFF' : theme.colors.textSecondary}
+                  />
+                </View>
+                <Text style={[styles.categoryText, category === cat && styles.categoryTextActive]}>{cat}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.row}>
+            <View style={{ flex: 1, marginRight: 10 }}>
+              <Text style={styles.label}>Data</Text>
+              <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
+                <Feather name="calendar" size={20} color={theme.colors.textPrimary} />
+                <Text style={styles.dateText}>{date.toLocaleDateString()}</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={styles.label}>Recorrente?</Text>
+              <View style={styles.switchContainer}>
+                <Text style={styles.switchLabel}>{isRecurring ? 'Sim' : 'Não'}</Text>
+                <Switch
+                  value={isRecurring}
+                  onValueChange={setIsRecurring}
+                  trackColor={{ false: "#767577", true: theme.colors.primary }}
+                  thumbColor={"#f4f3f4"}
+                />
+              </View>
+            </View>
+          </View>
+
+          {showDatePicker && (
+            <DateTimePicker
+              value={date}
+              mode="date"
+              display="default"
+              maximumDate={new Date()} // Can't create future transactions unless it's a payable (different screen)
+              onChange={(event, selectedDate) => {
+                setShowDatePicker(false);
+                if (selectedDate) setDate(selectedDate);
+              }}
+            />
+          )}
+        </View>
+
+        <View style={styles.footer}>
+          <PrimaryButton title="Salvar" onPress={handleSave} loading={loading} />
+        </View>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  label: { marginBottom: 5, fontWeight: 'bold' },
-  input: { borderWidth: 1, borderColor: '#ccc', padding: 10, marginBottom: 20, borderRadius: 5 },
-  typeContainer: { flexDirection: 'row', marginBottom: 20 },
-  typeButton: { flex: 1, padding: 15, alignItems: 'center', borderWidth: 1, borderColor: '#ccc' },
-  activeIncome: { backgroundColor: '#c8e6c9', borderColor: 'green' },
-  activeExpense: { backgroundColor: '#ffcdd2', borderColor: 'red' },
-  typeText: { fontWeight: 'bold' },
-  
-  categoriesContainer: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 20, gap: 10 },
-  categoryButton: { padding: 10, borderWidth: 1, borderColor: '#ccc', borderRadius: 20, marginBottom: 5 },
-  activeCategory: { backgroundColor: '#2196F3', borderColor: '#2196F3' },
-  categoryText: { color: '#333' },
-  activeCategoryText: { color: '#fff', fontWeight: 'bold' },
-  switchContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  container: { flex: 1, backgroundColor: theme.colors.background },
+  header: {
+    paddingTop: 50,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  backButton: { padding: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12 },
+  headerTitle: { fontSize: 18, color: '#FFF', fontWeight: 'bold' },
+
+  amountContainer: { alignItems: 'center', justifyContent: 'center', flexDirection: 'row', marginBottom: 20 },
+  currencyPrefix: { fontSize: 24, color: 'rgba(255,255,255,0.8)', marginRight: 5, marginTop: 10 },
+  amountInput: { fontSize: 48, color: '#FFF', fontWeight: 'bold', minWidth: 100, textAlign: 'center' },
+
+  typeSelector: { flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.1)', borderRadius: 16, padding: 4 },
+  typeButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 12 },
+  typeButtonActive: { backgroundColor: '#FFF' },
+  typeText: { marginLeft: 8, fontWeight: 'bold' },
+
+  content: { flex: 1 },
+  scrollContent: { padding: 20 },
+  inputGroup: { backgroundColor: '#FFF', borderRadius: 20, padding: 20, ...theme.shadows.default, marginBottom: 20 },
+  label: { fontSize: 14, fontWeight: '600', color: theme.colors.textPrimary, marginBottom: 10, marginTop: 10 },
+
+  categoriesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 10 },
+  categoryCard: {
+    width: '30%',
+    aspectRatio: 1,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 5
+  },
+  categoryCardActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.surface },
+  catIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.colors.background, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  categoryText: { fontSize: 12, color: theme.colors.textSecondary },
+  categoryTextActive: { color: theme.colors.primary, fontWeight: 'bold' },
+
+  row: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  dateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12
+  },
+  dateText: { marginLeft: 10, color: theme.colors.textPrimary },
+
+  switchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    height: 52
+  },
+  switchLabel: { fontWeight: 'bold', color: theme.colors.textPrimary },
+
+  footer: { marginBottom: 30 }
 });

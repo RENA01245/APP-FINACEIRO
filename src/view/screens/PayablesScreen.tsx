@@ -1,24 +1,30 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, Button, TextInput, Alert, TouchableOpacity, Modal, Platform } from 'react-native';
+
+import React, { useState, useCallback } from 'react';
+import { View, Text, FlatList, StyleSheet, Button, TextInput, Alert, TouchableOpacity, Modal, StatusBar } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Feather } from '@expo/vector-icons';
 
 import { NotificationService } from '../../infra/services/NotificationService';
 import { PayablesViewModel } from '../../viewmodel/PayablesViewModel';
 import { Payable } from '../../model/Payable';
-import { Feather } from '@expo/vector-icons';
+import { theme } from '../../design/theme';
+import { PrimaryButton } from '../components/PrimaryButton';
+import { CustomInput } from '../components/CustomInput';
+import { Card } from '../components/Card';
 
 export function PayablesScreen() {
   const [payables, setPayables] = useState<Payable[]>([]);
   const [viewModel] = useState(() => new PayablesViewModel());
   const [modalVisible, setModalVisible] = useState(false);
-  
+
   // Payment Modal State
   const [paymentModalVisible, setPaymentModalVisible] = useState(false);
   const [selectedPayable, setSelectedPayable] = useState<Payable | null>(null);
   const [paymentDate, setPaymentDate] = useState(new Date());
   const [showPaymentDatePicker, setShowPaymentDatePicker] = useState(false);
-  
+
   // Form state
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
@@ -40,19 +46,15 @@ export function PayablesScreen() {
       NotificationService.requestPermissions();
     }, [])
   );
-  
+
   const handleDateChange = (text: string) => {
-    // Remove tudo que não é número
     let cleanText = text.replace(/\D/g, '');
-    
-    // Adiciona as barras automaticamente
     if (cleanText.length >= 2) {
       cleanText = cleanText.substring(0, 2) + '/' + cleanText.substring(2);
     }
     if (cleanText.length >= 5) {
       cleanText = cleanText.substring(0, 5) + '/' + cleanText.substring(5, 9);
     }
-
     setDateStr(cleanText);
   };
 
@@ -62,10 +64,10 @@ export function PayablesScreen() {
         Alert.alert('Erro', 'Data inválida. Use o formato DD/MM/AAAA');
         return;
       }
-      
+
       const [day, month, year] = dateStr.split('/').map(Number);
       const dateObj = new Date(year, month - 1, day);
-      
+
       setLoading(true);
       await viewModel.add(description, amount, dateObj);
       setModalVisible(false);
@@ -89,7 +91,7 @@ export function PayablesScreen() {
 
   const confirmPayment = async () => {
     if (!selectedPayable) return;
-    
+
     try {
       await viewModel.pay(selectedPayable, paymentDate);
       setPaymentModalVisible(false);
@@ -100,93 +102,116 @@ export function PayablesScreen() {
     }
   };
 
-
-
   const renderItem = ({ item }: { item: Payable }) => (
-    <View style={styles.card}>
+    <View style={styles.cardContainer}>
       <View style={styles.cardContent}>
-        <Text style={styles.description}>{item.description}</Text>
-        <Text style={styles.amount}>R$ {item.amount.toFixed(2)}</Text>
-        <Text style={styles.date}>Vence em: {new Date(item.due_date).toLocaleDateString('pt-BR')}</Text>
+        <View style={styles.iconContainer}>
+          <Feather name="file-text" size={24} color={theme.colors.danger} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.description}>{item.description}</Text>
+          <Text style={styles.date}>Vence: {new Date(item.due_date).toLocaleDateString('pt-BR')}</Text>
+        </View>
+        <View style={{ alignItems: 'flex-end', marginRight: 10 }}>
+          <Text style={styles.amount}>R$ {item.amount.toFixed(2)}</Text>
+        </View>
       </View>
+
       <TouchableOpacity style={styles.payButton} onPress={() => handlePay(item)}>
         <Text style={styles.payButtonText}>Pagar</Text>
+        <Feather name="check-circle" size={16} color="#FFF" style={{ marginLeft: 5 }} />
       </TouchableOpacity>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Contas a Pagar</Text>
-        <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.addButton}>
-            <Feather name="plus" size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      <StatusBar barStyle="light-content" />
+      <LinearGradient colors={theme.colors.gradientPrimary} style={styles.header}>
+        <View style={styles.headerTop}>
+          <Text style={styles.headerTitle}>Contas a Pagar</Text>
+          <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.addButton}>
+            <Feather name="plus" size={24} color={theme.colors.primary} />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
 
       <FlatList
         data={payables}
         keyExtractor={item => item.id || Math.random().toString()}
         renderItem={renderItem}
-        ListEmptyComponent={<Text style={styles.emptyText}>Nenhuma conta pendente.</Text>}
+        contentContainerStyle={styles.list}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Feather name="check-circle" size={64} color={theme.colors.placeholder} />
+            <Text style={styles.emptyText}>Tudo em dia!</Text>
+            <Text style={styles.emptySubText}>Nenhuma conta pendente.</Text>
+          </View>
+        }
       />
 
       <Modal visible={modalVisible} animationType="slide" transparent={true}>
-        <View style={styles.modalContainer}>
+        <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Nova Conta a Pagar</Text>
-            
-            <TextInput
-              style={styles.input}
-              placeholder="Descrição (ex: Luz)"
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Nova Conta</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <Feather name="x" size={24} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            <CustomInput
+              label="Descrição"
+              placeholder="Ex: Energia"
               value={description}
               onChangeText={setDescription}
+              icon="file-text"
             />
-            
-            <TextInput
-              style={styles.input}
-              placeholder="Valor (0.00)"
+
+            <CustomInput
+              label="Valor"
+              placeholder="0.00"
               keyboardType="numeric"
               value={amount}
               onChangeText={setAmount}
+              icon="dollar-sign"
             />
 
-            <TextInput
-              style={styles.input}
-              placeholder="Vencimento (DD/MM/AAAA)"
+            <CustomInput
+              label="Vencimento"
+              placeholder="DD/MM/AAAA"
               value={dateStr}
               onChangeText={handleDateChange}
               keyboardType="numeric"
               maxLength={10}
+              icon="calendar"
             />
 
-            <View style={styles.modalButtons}>
-              <Button title="Cancelar" color="red" onPress={() => setModalVisible(false)} />
-              <Button title={loading ? "Salvando..." : "Salvar"} onPress={handleAdd} disabled={loading} />
-            </View>
+            <PrimaryButton title="Agendar" onPress={handleAdd} loading={loading} style={{ marginTop: 10 }} />
           </View>
         </View>
       </Modal>
 
       {/* Payment Confirmation Modal */}
       <Modal visible={paymentModalVisible} animationType="fade" transparent={true}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { marginHorizontal: 40 }]}>
             <Text style={styles.modalTitle}>Confirmar Pagamento</Text>
-            
+
             {selectedPayable && (
-               <Text style={{marginBottom: 15, fontSize: 16, textAlign: 'center'}}>
-                 Pagar {selectedPayable.description} no valor de R$ {selectedPayable.amount.toFixed(2)}?
-               </Text>
+              <Text style={{ marginBottom: 20, fontSize: 16, textAlign: 'center', color: theme.colors.textSecondary }}>
+                Confirmar pagamento de <Text style={{ fontWeight: 'bold', color: theme.colors.textPrimary }}>{selectedPayable.description}</Text> no valor de <Text style={{ fontWeight: 'bold', color: theme.colors.danger }}>R$ {selectedPayable.amount.toFixed(2)}</Text>?
+              </Text>
             )}
 
-            <Text style={{marginBottom: 5, fontWeight: 'bold'}}>Data do Pagamento:</Text>
-            
-            <TouchableOpacity 
-              style={styles.dateButton} 
+            <Text style={{ marginBottom: 8, fontWeight: 'bold', color: theme.colors.textPrimary, alignSelf: 'flex-start' }}>Data do Pagamento:</Text>
+
+            <TouchableOpacity
+              style={styles.dateButton}
               onPress={() => setShowPaymentDatePicker(true)}
             >
-              <Text>{paymentDate.toLocaleDateString('pt-BR')}</Text>
+              <Feather name="calendar" size={20} color={theme.colors.textPrimary} />
+              <Text style={{ marginLeft: 10, color: theme.colors.textPrimary }}>{paymentDate.toLocaleDateString('pt-BR')}</Text>
             </TouchableOpacity>
 
             {showPaymentDatePicker && (
@@ -203,8 +228,8 @@ export function PayablesScreen() {
             )}
 
             <View style={styles.modalButtons}>
-              <Button title="Cancelar" color="red" onPress={() => setPaymentModalVisible(false)} />
-              <Button title="Confirmar" onPress={confirmPayment} />
+              <PrimaryButton title="Cancelar" onPress={() => setPaymentModalVisible(false)} variant="outline" style={{ flex: 1, marginRight: 10 }} />
+              <PrimaryButton title="Confirmar" onPress={confirmPayment} style={{ flex: 1, marginLeft: 10 }} />
             </View>
           </View>
         </View>
@@ -214,26 +239,77 @@ export function PayablesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#f5f5f5' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  title: { fontSize: 24, fontWeight: 'bold' },
-  addButton: { backgroundColor: '#2196F3', padding: 10, borderRadius: 50 },
-  
-  card: { backgroundColor: '#fff', padding: 15, borderRadius: 10, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 2 },
-  cardContent: { flex: 1 },
-  description: { fontSize: 16, fontWeight: 'bold' },
-  amount: { fontSize: 16, color: '#d32f2f', marginVertical: 4 },
-  date: { fontSize: 12, color: '#666' },
-  
-  payButton: { backgroundColor: '#4caf50', paddingVertical: 8, paddingHorizontal: 15, borderRadius: 5 },
+  container: { flex: 1, backgroundColor: theme.colors.background },
+  header: {
+    paddingTop: 50,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#FFF' },
+  addButton: {
+    backgroundColor: '#FFF',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...theme.shadows.default
+  },
+
+  list: { padding: 20 },
+  cardContainer: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    marginBottom: 12,
+    ...theme.shadows.default,
+    overflow: 'hidden'
+  },
+  cardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFEBEE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12
+  },
+  description: { fontSize: 16, fontWeight: 'bold', color: theme.colors.textPrimary },
+  date: { fontSize: 12, color: theme.colors.textSecondary },
+  amount: { fontSize: 18, fontWeight: 'bold', color: theme.colors.danger },
+
+  payButton: {
+    flexDirection: 'row',
+    backgroundColor: theme.colors.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10
+  },
   payButtonText: { color: '#fff', fontWeight: 'bold' },
-  
-  emptyText: { textAlign: 'center', marginTop: 50, color: '#999' },
-  
-  modalContainer: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 20 },
-  modalContent: { backgroundColor: '#fff', padding: 20, borderRadius: 10 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
-  input: { borderWidth: 1, borderColor: '#ccc', padding: 10, marginBottom: 15, borderRadius: 5 },
-  dateButton: { padding: 15, borderWidth: 1, borderColor: '#ccc', borderRadius: 5, marginBottom: 20, alignItems: 'center' },
-  modalButtons: { flexDirection: 'row', justifyContent: 'space-around' }
+
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', marginTop: 80 },
+  emptyText: { fontSize: 22, fontWeight: 'bold', color: theme.colors.textPrimary, marginTop: 20 },
+  emptySubText: { fontSize: 16, color: theme.colors.textSecondary, marginTop: 5 },
+
+  modalOverlay: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 20 },
+  modalContent: { backgroundColor: '#fff', padding: 20, borderRadius: 20, ...theme.shadows.default },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: theme.colors.textPrimary },
+  dateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    marginBottom: 20
+  },
+  modalButtons: { flexDirection: 'row', justifyContent: 'space-between' }
 });

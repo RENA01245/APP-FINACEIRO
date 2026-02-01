@@ -1,14 +1,21 @@
+
 import React, { useState, useCallback } from 'react';
-import { View, Text, Button, FlatList, StyleSheet, Alert, TouchableOpacity, Modal, TextInput, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, Alert, TouchableOpacity, StatusBar } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
+
 import { AuthViewModel } from '../../viewmodel/AuthViewModel';
 import { HomeViewModel } from '../../viewmodel/HomeViewModel';
 import { BudgetViewModel } from '../../viewmodel/BudgetViewModel';
 import { PayablesViewModel } from '../../viewmodel/PayablesViewModel';
+
 import { Transaction } from '../../model/Transaction';
 import { Payable } from '../../model/Payable';
+
+import { theme } from '../../design/theme';
+import { TransactionList } from '../components/TransactionList';
+import { Card } from '../components/Card';
 import { BudgetProgressBar } from '../components/BudgetProgressBar';
 
 export function HomeScreen() {
@@ -16,63 +23,24 @@ export function HomeScreen() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState({ income: 0, expense: 0, total: 0 });
   const [monthLabel, setMonthLabel] = useState('');
-  
+
   const authViewModel = new AuthViewModel();
   const [homeViewModel] = useState(() => new HomeViewModel());
-  
-  // Budget State
   const [budgetViewModel] = useState(() => new BudgetViewModel());
   const [payablesViewModel] = useState(() => new PayablesViewModel());
-  const [budgetModalVisible, setBudgetModalVisible] = useState(false);
-  const [budgetStatus, setBudgetStatus] = useState<{category: string, budget: number, spent: number}[]>([]);
+
+  const [budgetStatus, setBudgetStatus] = useState<{ category: string, budget: number, spent: number }[]>([]);
   const [upcomingPayables, setUpcomingPayables] = useState<Payable[]>([]);
-  const [categories] = useState(['Alimentação', 'Transporte', 'Lazer', 'Contas', 'Saúde', 'Outros']);
-
-  const loadBudgets = async () => {
-    try {
-        const monthStr = homeViewModel.currentDate.toISOString().slice(0, 7); // YYYY-MM
-        const status = await budgetViewModel.getBudgetsStatus(monthStr);
-        
-        // Merge with fixed categories to ensure all are shown
-        const mergedStatus = categories.map(cat => {
-            const existing = status.find(s => s.category === cat);
-            return existing || { category: cat, budget: 0, spent: 0 };
-        });
-        
-        // Also add any categories that have budgets but are not in the fixed list (custom ones)
-        status.forEach(s => {
-            if (!categories.includes(s.category)) {
-                mergedStatus.push(s);
-            }
-        });
-        
-        setBudgetStatus(mergedStatus);
-    } catch (e) {
-        console.log(e);
-    }
-  };
-
-  const saveBudget = async (category: string, amount: string) => {
-      try {
-          const monthStr = homeViewModel.currentDate.toISOString().slice(0, 7);
-          await budgetViewModel.setBudget(category, amount, monthStr);
-          loadBudgets(); // Refresh
-      } catch (e: any) {
-          Alert.alert('Erro', e.message);
-      }
-  };
 
   const loadData = async () => {
     try {
-      // Check for recurring transactions
       await homeViewModel.checkRecurring();
-      
-      // Load budgets
-      await loadBudgets();
 
-      // Load upcoming payables
+      const monthStr = homeViewModel.currentDate.toISOString().slice(0, 7);
+      const status = await budgetViewModel.getBudgetsStatus(monthStr);
+      setBudgetStatus(status);
+
       const pending = await payablesViewModel.getPending();
-      // Show only top 2 soonest
       setUpcomingPayables(pending.slice(0, 2));
 
       const data = await homeViewModel.getTransactions();
@@ -100,14 +68,10 @@ export function HomeScreen() {
     loadData();
   };
 
-  const handleLogout = () => {
-    authViewModel.logout();
-  };
-
   const handleDelete = (id: string) => {
     Alert.alert(
       'Excluir Transação',
-      'Tem certeza que deseja excluir esta transação?',
+      'Tem certeza?',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -116,9 +80,9 @@ export function HomeScreen() {
           onPress: async () => {
             try {
               await homeViewModel.deleteTransaction(id);
-              loadData(); // Reload list and summary
+              loadData();
             } catch (error: any) {
-              Alert.alert('Erro', 'Não foi possível excluir a transação.');
+              Alert.alert('Erro', 'Não foi possível excluir.');
             }
           },
         },
@@ -126,296 +90,180 @@ export function HomeScreen() {
     );
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Minhas Finanças</Text>
-        <Button title="Sair" onPress={handleLogout} color="red" />
+  const Header = () => (
+    <View>
+      <View style={styles.headerTop}>
+        <View>
+          <Text style={styles.greetingText}>Olá,</Text>
+          <Text style={styles.usernameText}>Bem-vindo de volta</Text>
+        </View>
+        <TouchableOpacity onPress={() => authViewModel.logout()} style={styles.logoutButton}>
+          <Feather name="log-out" size={20} color="#FFF" />
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.monthControl}>
-        <TouchableOpacity onPress={handlePrevMonth} style={styles.arrowButton}>
-          <Feather name="chevron-left" size={28} color="#333" />
+      {/* Month Selector */}
+      <View style={styles.monthSelector}>
+        <TouchableOpacity onPress={handlePrevMonth} style={styles.arrowArea}>
+          <Feather name="chevron-left" size={24} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.monthLabel}>{monthLabel}</Text>
-        <TouchableOpacity onPress={handleNextMonth} style={styles.arrowButton}>
-          <Feather name="chevron-right" size={28} color="#333" />
+        <TouchableOpacity onPress={handleNextMonth} style={styles.arrowArea}>
+          <Feather name="chevron-right" size={24} color="#FFF" />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.summaryContainer}>
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Receitas</Text>
-          <Text style={[styles.summaryValue, styles.textIncome]}>R$ {summary.income.toFixed(2)}</Text>
+      {/* Balance Card */}
+      <Card style={styles.balanceCard}>
+        <View style={styles.balanceHeader}>
+          <Text style={styles.balanceLabel}>Saldo Atual</Text>
+          <Feather name={summary.total >= 0 ? "trending-up" : "trending-down"} size={20} color={summary.total >= 0 ? theme.colors.secondary : theme.colors.danger} />
         </View>
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Despesas</Text>
-          <Text style={[styles.summaryValue, styles.textExpense]}>R$ {summary.expense.toFixed(2)}</Text>
-        </View>
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Saldo</Text>
-          <Text style={[styles.summaryValue, summary.total >= 0 ? styles.textIncome : styles.textExpense]}>
-            R$ {summary.total.toFixed(2)}
-          </Text>
-        </View>
-      </View>
+        <Text style={styles.balanceValue}>R$ {summary.total.toFixed(2)}</Text>
 
-      <View style={styles.actions}>
-        <View style={styles.actionButtonsRow}>
-            <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('AddTransaction')}>
-                <Feather name="plus" size={20} color="#fff" />
-                <Text style={styles.actionButtonText}>Nova</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#ff9800'}]} onPress={() => navigation.navigate('Payables')}>
-                <Feather name="calendar" size={20} color="#fff" />
-                <Text style={styles.actionButtonText}>Contas</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#9c27b0'}]} onPress={() => {
-                loadBudgets();
-                setBudgetModalVisible(true);
-            }}>
-                <Feather name="target" size={20} color="#fff" />
-                <Text style={styles.actionButtonText}>Metas</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#2196f3'}]} onPress={() => navigation.navigate('Reports', { date: homeViewModel.currentDate.toISOString() })}>
-                <Feather name="bar-chart-2" size={20} color="#fff" />
-                <Text style={styles.actionButtonText}>Relatórios</Text>
-            </TouchableOpacity>
-        </View>
-      </View>
-
-      <FlatList
-        data={transactions}
-        keyExtractor={(item) => item.id || Math.random().toString()}
-        contentContainerStyle={styles.list}
-        ListHeaderComponent={
+        <View style={styles.balanceRow}>
           <View>
-            {upcomingPayables.length > 0 && (
-              <View style={styles.budgetSection}>
-                <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10}}>
-                   <Text style={styles.sectionTitle}>Próximas Contas</Text>
-                   <TouchableOpacity onPress={() => navigation.navigate('Payables')}>
-                     <Text style={{color: '#2196f3', fontSize: 12}}>Ver todas</Text>
-                   </TouchableOpacity>
-                </View>
-                {upcomingPayables.map((item, index) => (
-                  <View key={index} style={styles.payableItem}>
-                    <View>
-                        <Text style={styles.payableDesc}>{item.description}</Text>
-                        <Text style={styles.payableDate}>Vence: {new Date(item.due_date).toLocaleDateString('pt-BR')}</Text>
-                    </View>
-                    <Text style={styles.payableAmount}>R$ {item.amount.toFixed(2)}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {budgetStatus.some(b => b.budget > 0) && (
-              <View style={styles.budgetSection}>
-                <Text style={styles.sectionTitle}>Orçamento Mensal</Text>
-                {budgetStatus.map((item, index) => (
-                   <BudgetProgressBar 
-                      key={index}
-                      category={item.category}
-                      budget={item.budget}
-                      spent={item.spent}
-                   />
-                ))}
-              </View>
-            )}
-            <Text style={styles.sectionTitle}>Transações</Text>
-          </View>
-        }
-        renderItem={({ item }) => (
-          <View style={[styles.card, item.type === 'expense' ? styles.expense : styles.income]}>
-            <View style={styles.cardContent}>
-              <TouchableOpacity onPress={() => navigation.navigate('AddTransaction', { transaction: item })}>
-                <Text style={styles.desc}>{item.description}</Text>
-                {item.category && <Text style={styles.category}>{item.category}</Text>}
-                <Text style={styles.amount}>R$ {item.amount.toFixed(2)}</Text>
-              </TouchableOpacity>
+            <View style={styles.balanceRowLabel}>
+              <Feather name="arrow-up-circle" size={14} color={theme.colors.secondary} />
+              <Text style={styles.miniLabel}> Receitas</Text>
             </View>
-            <TouchableOpacity 
-              onPress={() => item.id && handleDelete(item.id)}
-              style={styles.deleteButton}
-            >
-              <Text style={styles.deleteText}>X</Text>
-            </TouchableOpacity>
+            <Text style={[styles.miniValue, { color: theme.colors.secondary }]}>R$ {summary.income.toFixed(2)}</Text>
           </View>
-        )}
-        ListEmptyComponent={<Text style={styles.empty}>Nenhuma transação</Text>}
-      />
-
-      <Modal
-        visible={budgetModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setBudgetModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Definir Orçamentos</Text>
-                  <TouchableOpacity onPress={() => setBudgetModalVisible(false)}>
-                      <Feather name="x" size={24} color="#333" />
-                  </TouchableOpacity>
-              </View>
-              <ScrollView>
-                  {budgetStatus.map((item, index) => (
-                      <View key={index} style={styles.budgetRow}>
-                          <View style={styles.budgetInfo}>
-                              <Text style={styles.budgetCategory}>{item.category}</Text>
-                          </View>
-                          <View style={styles.budgetValues}>
-                              <Text style={styles.budgetSpent}>Gasto: R$ {item.spent.toFixed(2)}</Text>
-                              <View style={styles.budgetInputContainer}>
-                                  <Text>Meta: R$ </Text>
-                                  <TextInput 
-                                      style={styles.budgetInput}
-                                      keyboardType="numeric"
-                                      placeholder="0.00"
-                                      defaultValue={item.budget > 0 ? item.budget.toString() : ''}
-                                      onEndEditing={(e) => saveBudget(item.category, e.nativeEvent.text)}
-                                  />
-                              </View>
-                          </View>
-                      </View>
-                  ))}
-              </ScrollView>
+          <View style={styles.separator} />
+          <View>
+            <View style={styles.balanceRowLabel}>
+              <Feather name="arrow-down-circle" size={14} color={theme.colors.danger} />
+              <Text style={styles.miniLabel}> Despesas</Text>
+            </View>
+            <Text style={[styles.miniValue, { color: theme.colors.danger }]}>R$ {summary.expense.toFixed(2)}</Text>
           </View>
         </View>
-      </Modal>
-    </SafeAreaView>
+      </Card>
+
+      {/* Notifications / Payables Preview */}
+      {upcomingPayables.length > 0 && (
+        <View style={styles.sectionContainer}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={styles.sectionTitle}>Próximas Contas</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Contas')}>
+              <Text style={styles.seeAll}>Ver todas</Text>
+            </TouchableOpacity>
+          </View>
+
+          {upcomingPayables.map((item, index) => (
+            <View key={index} style={styles.payableAlert}>
+              <Feather name="alert-circle" size={18} color={theme.colors.danger} style={{ marginRight: 8 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.payableAlertTitle}>{item.description}</Text>
+                <Text style={styles.payableAlertDate}>Vence: {new Date(item.due_date).toLocaleDateString('pt-BR')}</Text>
+              </View>
+              <Text style={[styles.payableAlertAmount, { color: theme.colors.danger }]}>R$ {item.amount.toFixed(2)}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {budgetStatus.some(b => b.budget > 0) && (
+        <View style={styles.sectionContainer}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <Text style={styles.sectionTitle}>Orçamentos</Text>
+          </View>
+
+          {budgetStatus.filter(b => b.budget > 0).slice(0, 3).map((item, index) => (
+            <BudgetProgressBar
+              key={index}
+              category={item.category}
+              budget={item.budget}
+              spent={item.spent}
+            />
+          ))}
+        </View>
+      )}
+
+      <Text style={styles.sectionTitle}>Todas as Transações</Text>
+    </View>
+  );
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+
+      {/* Background Gradient Header */}
+      <LinearGradient colors={theme.colors.gradientPrimary} style={styles.bgHeader} />
+
+      <TransactionList
+        transactions={transactions}
+        onPressItem={(item) => navigation.navigate('AddTransaction', { transaction: item })}
+        onDeleteItem={handleDelete}
+        ListHeaderComponent={Header}
+        // Need extra padding at bottom for TabBar content if it overlays, but standard TabBar doesn't.
+        contentContainerStyle={{ padding: 20, paddingTop: 60, paddingBottom: 100 }}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#f5f5f5' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, marginTop: 20 },
-  title: { fontSize: 24, fontWeight: 'bold' },
-  iconButton: {
-    padding: 8,
-    marginRight: 5,
+  container: { flex: 1, backgroundColor: theme.colors.background },
+  bgHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 250,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
-  monthControl: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-    backgroundColor: '#fff',
-    padding: 10,
-    borderRadius: 8,
-  },
-  arrowButton: {
-    paddingHorizontal: 20,
-  },
-  arrowText: {
-    fontSize: 20,
-    color: '#333',
-  },
-  monthLabel: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    minWidth: 150,
-    textAlign: 'center',
-  },
-
-  summaryContainer: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    backgroundColor: '#fff', 
-    padding: 15, 
-    borderRadius: 10, 
-    marginBottom: 20,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
-  },
-  summaryItem: { alignItems: 'center' },
-  summaryLabel: { fontSize: 12, color: '#666' },
-  summaryValue: { fontSize: 16, fontWeight: 'bold' },
-  textIncome: { color: '#2e7d32' },
-  textExpense: { color: '#c62828' },
-
-  actions: { marginBottom: 15 },
-  
-  seeMoreText: { textAlign: 'center', color: '#2196F3', marginTop: 5, fontSize: 12 },
-  budgetSection: { marginBottom: 15 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10, color: '#333' },
-  list: { paddingBottom: 80 },
-  card: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center',
-    padding: 15, 
-    marginBottom: 10, 
-    backgroundColor: '#fff', 
-    borderRadius: 8,
-    elevation: 1,
-  },
-  expense: { borderLeftWidth: 5, borderLeftColor: '#c62828' },
-  income: { borderLeftWidth: 5, borderLeftColor: '#2e7d32' },
-  cardContent: { flex: 1 },
-  desc: { fontSize: 16, fontWeight: 'bold' },
-  category: { fontSize: 12, color: '#666', marginTop: 2 },
-  amount: { fontSize: 16, marginTop: 4 },
-  deleteButton: { padding: 10 },
-  deleteText: { color: 'red', fontWeight: 'bold' },
-  empty: { textAlign: 'center', marginTop: 50, color: '#999' },
-  
-  actionButtonsRow: { flexDirection: 'row', justifyContent: 'space-around' },
-  actionButton: { 
-      backgroundColor: '#2196F3', 
-      paddingVertical: 10, 
-      paddingHorizontal: 20, 
-      borderRadius: 8, 
-      flexDirection: 'row', 
-      alignItems: 'center',
-      minWidth: 100,
-      justifyContent: 'center'
-  },
-  actionButtonText: { color: '#fff', marginLeft: 8, fontWeight: 'bold' },
-
-  modalContainer: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 20 },
-  modalContent: { backgroundColor: '#fff', padding: 20, borderRadius: 10, maxHeight: '80%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold' },
-  budgetRow: { marginBottom: 20 },
-  budgetInfo: { marginBottom: 5 },
-  budgetCategory: { fontWeight: 'bold', fontSize: 16 },
-  budgetValues: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 },
-  budgetSpent: { color: '#666' },
-  budgetInputContainer: { flexDirection: 'row', alignItems: 'center' },
-  budgetInput: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-    width: 80,
-    textAlign: 'right',
-    padding: 2
-  },
-  payableItem: {
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee'
+    marginBottom: 20
   },
-  payableDesc: {
-    fontWeight: '500',
-    color: '#333'
+  greetingText: { color: 'rgba(255,255,255,0.7)', fontSize: 16 },
+  usernameText: { color: '#FFF', fontSize: 20, fontWeight: 'bold' },
+  logoutButton: { padding: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12 },
+
+  monthSelector: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20
   },
-  payableDate: {
-    fontSize: 12,
-    color: '#666'
+  arrowArea: { padding: 10 },
+  monthLabel: { color: '#FFF', fontSize: 18, fontWeight: '600', minWidth: 140, textAlign: 'center' },
+
+  balanceCard: {
+    marginBottom: 24,
+    borderRadius: 20,
+    padding: 20,
+    ...theme.shadows.default
   },
-  payableAmount: {
-    fontWeight: 'bold',
-    color: '#f44336'
-  }
+  balanceHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
+  balanceLabel: { color: theme.colors.textSecondary, fontSize: 14 },
+  balanceValue: { color: theme.colors.textPrimary, fontSize: 32, fontWeight: 'bold', marginBottom: 20 },
+  balanceRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  separator: { width: 1, backgroundColor: theme.colors.border },
+  balanceRowLabel: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
+  miniLabel: { fontSize: 12, color: theme.colors.textSecondary },
+  miniValue: { fontSize: 16, fontWeight: 'bold' },
+
+  sectionContainer: { marginBottom: 20 },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: theme.colors.textPrimary },
+  seeAll: { color: theme.colors.primary, fontSize: 14, fontWeight: '600' },
+
+  payableAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    padding: 12,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: theme.colors.danger,
+    marginTop: 10,
+    ...theme.shadows.soft
+  },
+  payableAlertTitle: { fontWeight: '600', color: theme.colors.textPrimary },
+  payableAlertDate: { fontSize: 12, color: theme.colors.textSecondary },
+  payableAlertAmount: { fontWeight: 'bold' },
 });

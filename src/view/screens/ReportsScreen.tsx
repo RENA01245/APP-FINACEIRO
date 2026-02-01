@@ -1,16 +1,20 @@
+
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity, ActivityIndicator, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PieChart, BarChart } from 'react-native-chart-kit';
 import { Feather } from '@expo/vector-icons';
-import { useFocusEffect, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useRoute, useNavigation } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
+
 import { ReportsViewModel } from '../../viewmodel/ReportsViewModel';
-import { Transaction } from '../../model/Transaction';
+import { theme } from '../../design/theme';
 
 const screenWidth = Dimensions.get('window').width;
 
 export function ReportsScreen() {
   const [viewModel] = useState(() => new ReportsViewModel());
+  const navigation = useNavigation();
   const route = useRoute<any>();
   const [loading, setLoading] = useState(true);
   const [monthLabel, setMonthLabel] = useState('');
@@ -22,7 +26,7 @@ export function ReportsScreen() {
     try {
       setLoading(true);
       const transactions = await viewModel.getTransactions();
-      
+
       const pie = viewModel.getExpensesByCategory(transactions);
       setPieData(pie);
       setTotalExpense(pie.reduce((acc, item) => acc + item.amount, 0));
@@ -60,133 +64,157 @@ export function ReportsScreen() {
   const chartConfig = {
     backgroundGradientFrom: "#ffffff",
     backgroundGradientTo: "#ffffff",
-    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    color: (opacity = 1) => theme.colors.primary,
     strokeWidth: 2,
     barPercentage: 0.5,
     decimalPlaces: 2,
+    labelColor: (opacity = 1) => theme.colors.textSecondary,
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handlePrevMonth} style={styles.arrowButton}>
-          <Feather name="chevron-left" size={28} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.monthLabel}>{monthLabel}</Text>
-        <TouchableOpacity onPress={handleNextMonth} style={styles.arrowButton}>
-          <Feather name="chevron-right" size={28} color="#333" />
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+
+      <LinearGradient colors={theme.colors.gradientPrimary} style={styles.header}>
+        <View style={styles.headerTop}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Feather name="arrow-left" size={24} color="#FFF" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Relatórios</Text>
+          <View style={{ width: 24 }} />
+        </View>
+
+        <View style={styles.monthSelector}>
+          <TouchableOpacity onPress={handlePrevMonth} style={styles.arrowArea}>
+            <Feather name="chevron-left" size={24} color="#FFF" />
+          </TouchableOpacity>
+          <Text style={styles.monthLabelText}>{monthLabel}</Text>
+          <TouchableOpacity onPress={handleNextMonth} style={styles.arrowArea}>
+            <Feather name="chevron-right" size={24} color="#FFF" />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#0000ff" style={{ marginTop: 50 }} />
+        <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 50 }} />
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent}>
-            
+
           <View style={styles.chartContainer}>
             <Text style={styles.chartTitle}>Despesas por Categoria</Text>
             {pieData.length > 0 ? (
-                <>
+              <>
                 <PieChart
-                data={pieData}
-                width={screenWidth - 30}
-                height={220}
-                chartConfig={chartConfig}
-                accessor={"amount"}
-                backgroundColor={"transparent"}
-                paddingLeft={"15"}
-                center={[10, 0]}
-                absolute
+                  data={pieData}
+                  width={screenWidth - 60}
+                  height={220}
+                  chartConfig={chartConfig}
+                  accessor={"amount"}
+                  backgroundColor={"transparent"}
+                  paddingLeft={"15"}
+                  center={[10, 0]}
+                  absolute
                 />
-                <Text style={styles.totalText}>Total Despesas: R$ {totalExpense.toFixed(2)}</Text>
-                </>
+                <View style={styles.totalBadge}>
+                  <Text style={styles.totalText}>Total: R$ {totalExpense.toFixed(2)}</Text>
+                </View>
+              </>
             ) : (
+              <View style={styles.noDataContainer}>
+                <Feather name="pie-chart" size={48} color={theme.colors.placeholder} />
                 <Text style={styles.noDataText}>Sem despesas neste mês.</Text>
+              </View>
             )}
           </View>
 
           <View style={styles.chartContainer}>
             <Text style={styles.chartTitle}>Receitas vs Despesas</Text>
             {barData && (barData.datasets[0].data[0] > 0 || barData.datasets[0].data[1] > 0) ? (
-                 <BarChart
-                 data={barData}
-                 width={screenWidth - 30}
-                 height={220}
-                 yAxisLabel="R$ "
-                 yAxisSuffix=""
-                 chartConfig={{
-                     ...chartConfig,
-                     color: (opacity = 1) => `rgba(63, 81, 181, ${opacity})`,
-                 }}
-                 verticalLabelRotation={0}
-                 showValuesOnTopOfBars
-               />
+              <BarChart
+                data={barData}
+                width={screenWidth - 60}
+                height={220}
+                yAxisLabel="R$ "
+                yAxisSuffix=""
+                chartConfig={{
+                  ...chartConfig,
+                  color: (opacity = 1) => theme.colors.secondary,
+                }}
+                verticalLabelRotation={0}
+                showValuesOnTopOfBars
+                fromZero
+              />
             ) : (
-                <Text style={styles.noDataText}>Sem dados neste mês.</Text>
+              <View style={styles.noDataContainer}>
+                <Feather name="bar-chart-2" size={48} color={theme.colors.placeholder} />
+                <Text style={styles.noDataText}>Sem transações para comparar.</Text>
+              </View>
             )}
-           
+
           </View>
 
         </ScrollView>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
+  container: { flex: 1, backgroundColor: theme.colors.background },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    paddingTop: 50,
+    paddingBottom: 20,
     paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: '#fff',
-    elevation: 2,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
-  monthLabel: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    textTransform: 'capitalize',
+  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  backButton: { padding: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12 },
+  headerTitle: { fontSize: 18, color: '#FFF', fontWeight: 'bold' },
+
+  monthSelector: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  arrowButton: {
-    padding: 5,
-  },
+  arrowArea: { padding: 10 },
+  monthLabelText: { color: '#FFF', fontSize: 18, fontWeight: '600', minWidth: 140, textAlign: 'center' },
+
   scrollContent: {
-    padding: 15,
+    padding: 20,
     paddingBottom: 40,
   },
   chartContainer: {
     backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 15,
+    borderRadius: 20,
+    padding: 20,
     marginBottom: 20,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
+    ...theme.shadows.default,
     alignItems: 'center'
   },
   chartTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#333',
+    marginBottom: 20,
+    color: theme.colors.textPrimary,
     alignSelf: 'flex-start'
   },
-  totalText: {
-      marginTop: 10,
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: '#555'
+  totalBadge: {
+    marginTop: 20,
+    backgroundColor: '#FFEBEE',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20
   },
+  totalText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: theme.colors.danger
+  },
+  noDataContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 30 },
   noDataText: {
-      marginVertical: 20,
-      color: '#999',
-      fontStyle: 'italic'
+    marginTop: 10,
+    color: theme.colors.textSecondary,
+    fontStyle: 'italic'
   }
 });

@@ -1,16 +1,143 @@
+
 import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Session } from '@supabase/supabase-js';
+import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
+
 import { LoginScreen } from '../view/screens/LoginScreen';
 import { HomeScreen } from '../view/screens/HomeScreen';
 import { AddTransactionScreen } from '../view/screens/AddTransactionScreen';
 import { PayablesScreen } from '../view/screens/PayablesScreen';
 import { ReportsScreen } from '../view/screens/ReportsScreen';
+import { BudgetsScreen } from '../view/screens/BudgetsScreen';
 import { ObserveAuthState } from '../usecase/auth/ObserveAuthState';
-import { View, ActivityIndicator } from 'react-native';
+import { theme } from '../design/theme';
 
 const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
+
+const CustomTabBarButton = ({ children, onPress }: any) => (
+  <TouchableOpacity
+    style={{
+      top: -20,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...theme.shadows.soft
+    }}
+    onPress={(e) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      onPress(e);
+    }}
+  >
+    <LinearGradient
+      colors={theme.colors.gradientSecondary}
+      style={{
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}
+    >
+      {children}
+    </LinearGradient>
+  </TouchableOpacity>
+);
+
+function AppTabs() {
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarShowLabel: true,
+        tabBarStyle: {
+          position: 'absolute',
+          bottom: 20,
+          left: 10,
+          right: 10,
+          backgroundColor: '#ffffff',
+          borderRadius: 20,
+          height: 70,
+          paddingBottom: 10,
+          ...theme.shadows.default,
+          borderTopWidth: 0,
+        },
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.textSecondary,
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '600',
+          marginTop: 0
+        }
+      }}
+    >
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{
+          tabBarLabel: 'Home',
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="home" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Payables"
+        component={PayablesScreen}
+        options={{
+          tabBarLabel: 'Contas',
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="calendar" color={color} size={size} />
+          ),
+        }}
+      />
+
+      {/* Middle Button - Navigates to the AddTransaction Stack */}
+      <Tab.Screen
+        name="AddTransactionTab"
+        component={AddTransactionScreen}
+        options={({ navigation }) => ({
+          tabBarLabel: '',
+          tabBarIcon: ({ focused }) => (
+            <Feather name="plus" color="#FFF" size={30} />
+          ),
+          tabBarButton: (props) => (
+            <CustomTabBarButton {...props} onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              navigation.navigate('AddTransaction');
+            }} />
+          )
+        })}
+      />
+
+      <Tab.Screen
+        name="Budgets"
+        component={BudgetsScreen}
+        options={{
+          tabBarLabel: 'Metas',
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="target" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Reports"
+        component={ReportsScreen}
+        options={{
+          tabBarLabel: 'Relatórios',
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="pie-chart" color={color} size={size} />
+          ),
+        }}
+      />
+    </Tab.Navigator>
+  );
+}
 
 export function RootNavigator() {
   const [session, setSession] = useState<Session | null>(null);
@@ -43,10 +170,17 @@ export function RootNavigator() {
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         ) : (
           <>
-            <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Minhas Finanças' }} />
-            <Stack.Screen name="AddTransaction" component={AddTransactionScreen} options={{ title: 'Nova Transação' }} />
-            <Stack.Screen name="Payables" component={PayablesScreen} options={{ title: 'Contas a Pagar' }} />
-            <Stack.Screen name="Reports" component={ReportsScreen} options={{ title: 'Relatórios' }} />
+            <Stack.Screen name="AppTabs" component={AppTabs} options={{ headerShown: false }} />
+            {/* We keep AddTransaction as a separate stack screen to open nicely on top or as modal */}
+            <Stack.Screen
+              name="AddTransaction"
+              component={AddTransactionScreen}
+              options={{
+                headerShown: false,
+                presentation: 'modal',
+                animation: 'slide_from_bottom'
+              }}
+            />
           </>
         )}
       </Stack.Navigator>

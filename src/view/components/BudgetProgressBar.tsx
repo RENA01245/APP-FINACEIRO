@@ -5,15 +5,16 @@ interface BudgetProgressBarProps {
   category: string;
   budget: number;
   spent: number;
+  showLabel?: boolean;
 }
 
-export function BudgetProgressBar({ category, budget, spent }: BudgetProgressBarProps) {
+export function BudgetProgressBar({ category, budget, spent, showLabel = true }: BudgetProgressBarProps) {
   // Se não houver orçamento definido, não mostra nada (ou mostra diferente)
   if (budget <= 0) return null;
 
   const percentage = Math.min((spent / budget) * 100, 100);
   const isOverBudget = spent > budget;
-  
+
   // Cores baseadas no percentual
   let color = '#4caf50'; // Verde
   if (percentage >= 80) color = '#ff9800'; // Laranja
@@ -21,25 +22,27 @@ export function BudgetProgressBar({ category, budget, spent }: BudgetProgressBar
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.category}>{category}</Text>
-        <Text style={styles.values}>
-          R$ {spent.toFixed(2)} / R$ {budget.toFixed(2)}
-        </Text>
-      </View>
-      
+      {showLabel && (
+        <View style={styles.header}>
+          <Text style={styles.category}>{category}</Text>
+          <Text style={styles.values}>
+            R$ {spent.toFixed(2)} / R$ {budget.toFixed(2)}
+          </Text>
+        </View>
+      )}
+
       <View style={styles.track}>
-        <View 
+        <View
           style={[
-            styles.bar, 
-            { 
-              width: `${percentage}%`, 
-              backgroundColor: color 
+            styles.bar,
+            {
+              width: `${percentage}%`,
+              backgroundColor: color
             }
-          ]} 
+          ]}
         />
       </View>
-      
+
       {isOverBudget && (
         <Text style={styles.warning}>Excedido em R$ {(spent - budget).toFixed(2)}</Text>
       )}
