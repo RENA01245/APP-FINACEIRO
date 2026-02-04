@@ -1,21 +1,23 @@
-
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert, Text, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, StyleSheet, Alert, Text, KeyboardAvoidingView, Platform, ScrollView, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { AuthViewModel } from '../../viewmodel/AuthViewModel';
-import { theme } from '../../design/theme';
-import { CustomInput } from '../components/CustomInput';
-import { PrimaryButton } from '../components/PrimaryButton';
 import { Feather } from '@expo/vector-icons';
 
+import { AuthViewModel } from '../../viewmodel/AuthViewModel';
+import { useAppTheme } from '../../design/ThemeContext';
+import { CustomInput } from '../components/CustomInput';
+import { PrimaryButton } from '../components/PrimaryButton';
+
 export function LoginScreen() {
+  const { theme, baseTheme, isDarkMode } = useAppTheme();
+  const styles = createStyles(theme, baseTheme);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const viewModel = new AuthViewModel();
+  const [viewModel] = useState(() => new AuthViewModel());
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -52,13 +54,14 @@ export function LoginScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
       <LinearGradient
-        colors={theme.colors.gradientPrimary}
+        colors={theme.gradientPrimary}
         style={styles.header}
       >
         <SafeAreaView edges={['top']} style={styles.safeArea}>
-          <View style={styles.logoCircle}>
-            <Feather name="dollar-sign" size={40} color={theme.colors.primary} />
+          <View style={[styles.logoCircle, { backgroundColor: theme.surface }]}>
+            <Feather name="dollar-sign" size={40} color={theme.primary} />
           </View>
           <Text style={styles.welcomeText}>Bem-vindo</Text>
           <Text style={styles.subText}>Controle suas finanças com simplicidade.</Text>
@@ -70,7 +73,7 @@ export function LoginScreen() {
         style={styles.content}
       >
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.formCard}>
+          <View style={[styles.formCard, { backgroundColor: theme.surface }]}>
             <CustomInput
               label="Email"
               placeholder="seu@email.com"
@@ -117,61 +120,61 @@ export function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background
-  },
-  header: {
-    height: 300,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-  },
-  safeArea: {
-    alignItems: 'center',
-    width: '100%',
-  },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#FFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-    ...theme.shadows.default
-  },
-  welcomeText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#FFF',
-    marginBottom: 5
-  },
-  subText: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 16
-  },
-  content: {
-    flex: 1,
-    marginTop: -40,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 20
-  },
-  formCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 20,
-    padding: 24,
-    ...theme.shadows.default
-  },
-  actions: {
-    marginTop: 20,
-  },
-  spacer: {
-    height: 15
-  }
-});
+function createStyles(theme: any, baseTheme: any) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.background
+    },
+    header: {
+      height: 300,
+      paddingHorizontal: 20,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderBottomLeftRadius: 30,
+      borderBottomRightRadius: 30,
+    },
+    safeArea: {
+      alignItems: 'center',
+      width: '100%',
+    },
+    logoCircle: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 20,
+      ...baseTheme.shadows.default
+    },
+    welcomeText: {
+      fontSize: 32,
+      fontWeight: 'bold',
+      color: '#FFF',
+      marginBottom: 5
+    },
+    subText: {
+      color: 'rgba(255,255,255,0.8)',
+      fontSize: 16
+    },
+    content: {
+      flex: 1,
+      marginTop: -40,
+    },
+    scrollContent: {
+      paddingHorizontal: 20,
+      paddingBottom: 20
+    },
+    formCard: {
+      borderRadius: 20,
+      padding: 24,
+      ...baseTheme.shadows.default
+    },
+    actions: {
+      marginTop: 20,
+    },
+    spacer: {
+      height: 15
+    }
+  });
+}

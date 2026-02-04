@@ -1,18 +1,32 @@
+export const lightColors = {
+  primary: '#1A237E', // Deep Royal Blue
+  secondary: '#00C853', // Emerald Green
+  danger: '#FF5252', // Soft Red
+  background: '#F8F9FA', // Ghost White
+  surface: '#FFFFFF', // Pure White
+  textPrimary: '#212121', // Dark Gunmetal
+  textSecondary: '#757575', // Slate Gray
+  placeholder: '#BDBDBD',
+  border: '#E0E0E0',
+  gradientPrimary: ['#1A237E', '#3949AB'] as readonly [string, string, ...string[]],
+  gradientSecondary: ['#00C853', '#69F0AE'] as readonly [string, string, ...string[]],
+};
+
+export const darkColors = {
+  primary: '#3F51B5',
+  secondary: '#00E676',
+  danger: '#FF5252',
+  background: '#121212',
+  surface: '#1E1E1E',
+  textPrimary: '#FFFFFF',
+  textSecondary: '#AAAAAA',
+  placeholder: '#424242',
+  border: '#333333',
+  gradientPrimary: ['#1A237E', '#283593'] as readonly [string, string, ...string[]],
+  gradientSecondary: ['#00C853', '#009624'] as readonly [string, string, ...string[]],
+};
 
 export const theme = {
-  colors: {
-    primary: '#1A237E', // Deep Royal Blue
-    secondary: '#00C853', // Emerald Green
-    danger: '#FF5252', // Soft Red
-    background: '#F8F9FA', // Ghost White
-    surface: '#FFFFFF', // Pure White
-    textPrimary: '#212121', // Dark Gunmetal
-    textSecondary: '#757575', // Slate Gray
-    placeholder: '#BDBDBD',
-    border: '#E0E0E0',
-    gradientPrimary: ['#1A237E', '#3949AB'] as readonly [string, string, ...string[]],
-    gradientSecondary: ['#00C853', '#69F0AE'] as readonly [string, string, ...string[]],
-  },
   typography: {
     fontFamily: {
       regular: 'System',

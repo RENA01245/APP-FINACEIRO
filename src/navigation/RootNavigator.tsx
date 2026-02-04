@@ -18,40 +18,46 @@ import { BudgetsScreen } from '../view/screens/BudgetsScreen';
 import { CategoriesScreen } from '../view/screens/CategoriesScreen';
 import { CardsScreen } from '../view/screens/CardsScreen';
 import { ObserveAuthState } from '../usecase/auth/ObserveAuthState';
-import { theme } from '../design/theme';
+import { useAppTheme } from '../design/ThemeContext';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-const CustomTabBarButton = ({ children, onPress }: any) => (
-  <TouchableOpacity
-    style={{
-      top: -20,
-      justifyContent: 'center',
-      alignItems: 'center',
-      ...theme.shadows.soft
-    }}
-    onPress={(e) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      onPress(e);
-    }}
-  >
-    <LinearGradient
-      colors={theme.colors.gradientSecondary}
+const CustomTabBarButton = ({ children, onPress }: any) => {
+  const { theme, baseTheme } = useAppTheme();
+  return (
+    <TouchableOpacity
       style={{
-        width: 60,
-        height: 60,
-        borderRadius: 30,
+        top: -20,
         justifyContent: 'center',
         alignItems: 'center',
+        ...baseTheme.shadows.soft
+      }}
+      onPress={(e) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        onPress(e);
       }}
     >
-      {children}
-    </LinearGradient>
-  </TouchableOpacity>
-);
+      <LinearGradient
+        colors={theme.gradientSecondary}
+        style={{
+          width: 60,
+          height: 60,
+          borderRadius: 30,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        {children}
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+};
+
+import { SettingsScreen } from '../view/screens/SettingsScreen';
 
 function AppTabs() {
+  const { theme, baseTheme } = useAppTheme();
   return (
     <Tab.Navigator
       screenOptions={{
@@ -62,15 +68,15 @@ function AppTabs() {
           bottom: 20,
           left: 10,
           right: 10,
-          backgroundColor: '#ffffff',
+          backgroundColor: theme.surface,
           borderRadius: 20,
           height: 70,
           paddingBottom: 10,
-          ...theme.shadows.default,
+          ...baseTheme.shadows.default,
           borderTopWidth: 0,
         },
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.textSecondary,
+        tabBarActiveTintColor: theme.primary,
+        tabBarInactiveTintColor: theme.textSecondary,
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: '600',
@@ -89,17 +95,16 @@ function AppTabs() {
         }}
       />
       <Tab.Screen
-        name="Payables"
-        component={PayablesScreen}
+        name="ReportsStack"
+        component={ReportsScreen}
         options={{
-          tabBarLabel: 'Contas',
+          tabBarLabel: 'Relatórios',
           tabBarIcon: ({ color, size }) => (
-            <Feather name="calendar" color={color} size={size} />
+            <Feather name="pie-chart" color={color} size={size} />
           ),
         }}
       />
 
-      {/* Middle Button - Navigates to the AddTransaction Stack */}
       <Tab.Screen
         name="AddTransactionTab"
         component={AddTransactionScreen}
@@ -118,22 +123,23 @@ function AppTabs() {
       />
 
       <Tab.Screen
+        name="Payables"
+        component={PayablesScreen}
+        options={{
+          tabBarLabel: 'Contas',
+          tabBarIcon: ({ color, size }) => (
+            <Feather name="file-text" color={color} size={size} />
+          ),
+        }}
+      />
+
+      <Tab.Screen
         name="Budgets"
         component={BudgetsScreen}
         options={{
           tabBarLabel: 'Metas',
           tabBarIcon: ({ color, size }) => (
             <Feather name="target" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Reports"
-        component={ReportsScreen}
-        options={{
-          tabBarLabel: 'Relatórios',
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="pie-chart" color={color} size={size} />
           ),
         }}
       />
@@ -191,6 +197,11 @@ export function RootNavigator() {
             <Stack.Screen
               name="Cards"
               component={CardsScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="Settings"
+              component={SettingsScreen}
               options={{ headerShown: false }}
             />
           </>

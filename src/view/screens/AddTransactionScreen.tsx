@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { View, TextInput, StyleSheet, Alert, Text, TouchableOpacity, Switch, Platform, ScrollView, StatusBar, FlatList } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -6,16 +5,19 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 
 import { AddTransactionViewModel } from '../../viewmodel/AddTransactionViewModel';
 import { CategoryViewModel } from '../../viewmodel/CategoryViewModel';
 import { CardViewModel } from '../../viewmodel/CardViewModel';
 import { Category } from '../../model/Category';
-import { theme } from '../../design/theme';
+import { useAppTheme } from '../../design/ThemeContext';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { CustomInput } from '../components/CustomInput';
 
 export function AddTransactionScreen() {
+  const { theme, baseTheme, isDarkMode } = useAppTheme();
+  const styles = createStyles(theme, baseTheme);
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
@@ -34,7 +36,7 @@ export function AddTransactionScreen() {
   const [cardId, setCardId] = useState(transaction?.card_id || '');
   const [cards, setCards] = useState<any[]>([]);
 
-  const viewModel = new AddTransactionViewModel();
+  const [viewModel] = useState(() => new AddTransactionViewModel());
   const [categoryViewModel] = useState(() => new CategoryViewModel());
   const [cardViewModel] = useState(() => new CardViewModel());
 
@@ -66,6 +68,7 @@ export function AddTransactionScreen() {
     }
 
     try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setLoading(true);
       if (transaction && transaction.id) {
         await viewModel.update(transaction.id, amount, description, type, category, isRecurring, date, paymentMethod, paymentMethod === 'credit_card' ? cardId : undefined);
@@ -82,11 +85,7 @@ export function AddTransactionScreen() {
   };
 
   const isIncome = type === 'income';
-  const headerColors = isIncome ? theme.colors.gradientSecondary : theme.colors.gradientPrimary;
-  // If expense, maybe use a reddish gradient or keep primary blue for neutral. 
-  // Let's use Red for expense to be clear.
-  const expenseGradient = ['#c62828', '#e53935'] as const;
-  const activeGradient = isIncome ? theme.colors.gradientSecondary : expenseGradient;
+  const activeGradient = (isIncome ? theme.gradientSecondary : (isDarkMode ? ['#441111', '#662222'] : ['#c62828', '#e53935'])) as readonly [string, string, ...string[]];
 
   return (
     <View style={styles.container}>
@@ -114,26 +113,32 @@ export function AddTransactionScreen() {
           />
         </View>
 
-        <View style={styles.typeSelector}>
+        <View style={styles.typeSelectorHeader}>
           <TouchableOpacity
-            style={[styles.typeButton, isIncome && styles.typeButtonActive]}
-            onPress={() => setType('income')}
+            style={[styles.typeButtonHeader, isIncome && styles.typeButtonActiveHeader]}
+            onPress={() => {
+              Haptics.selectionAsync();
+              setType('income');
+            }}
           >
-            <Feather name="arrow-up-circle" size={20} color={isIncome ? theme.colors.secondary : 'rgba(255,255,255,0.7)'} />
-            <Text style={[styles.typeText, isIncome ? { color: theme.colors.secondary } : { color: '#FFF' }]}>Receita</Text>
+            <Feather name="arrow-up-circle" size={20} color={isIncome ? theme.secondary : 'rgba(255,255,255,0.7)'} />
+            <Text style={[styles.typeTextHeader, isIncome ? { color: theme.secondary } : { color: '#FFF' }]}>Receita</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.typeButton, !isIncome && styles.typeButtonActive]}
-            onPress={() => setType('expense')}
+            style={[styles.typeButtonHeader, !isIncome && styles.typeButtonActiveHeader]}
+            onPress={() => {
+              Haptics.selectionAsync();
+              setType('expense');
+            }}
           >
-            <Feather name="arrow-down-circle" size={20} color={!isIncome ? theme.colors.danger : 'rgba(255,255,255,0.7)'} />
-            <Text style={[styles.typeText, !isIncome ? { color: theme.colors.danger } : { color: '#FFF' }]}>Despesa</Text>
+            <Feather name="arrow-down-circle" size={20} color={!isIncome ? theme.danger : 'rgba(255,255,255,0.7)'} />
+            <Text style={[styles.typeTextHeader, !isIncome ? { color: theme.danger } : { color: '#FFF' }]}>Despesa</Text>
           </TouchableOpacity>
         </View>
       </LinearGradient>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.inputGroup}>
+      <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={[styles.inputGroup, { backgroundColor: theme.surface }]}>
           <CustomInput
             label="Descrição"
             placeholder="Ex: Supermercado"
@@ -143,9 +148,9 @@ export function AddTransactionScreen() {
           />
 
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, marginBottom: 10 }}>
-            <Text style={styles.label}>Categoria</Text>
+            <Text style={[styles.label, { color: theme.textPrimary }]}>Categoria</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Categories')}>
-              <Text style={{ color: theme.colors.primary, fontSize: 12, fontWeight: 'bold' }}>Configurar</Text>
+              <Text style={{ color: theme.primary, fontSize: 12, fontWeight: 'bold' }}>Configurar</Text>
             </TouchableOpacity>
           </View>
 
@@ -153,38 +158,41 @@ export function AddTransactionScreen() {
             {categories.map((cat, idx) => (
               <TouchableOpacity
                 key={cat.id || `cat-${idx}`}
-                style={[styles.categoryCard, category === cat.name && styles.categoryCardActive]}
-                onPress={() => setCategory(cat.name)}
+                style={[styles.categoryCard, { borderColor: theme.border }, category === cat.name && { borderColor: theme.primary, backgroundColor: theme.surface }]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setCategory(cat.name);
+                }}
               >
-                <View style={[styles.catIcon, category === cat.name && { backgroundColor: theme.colors.primary }]}>
+                <View style={[styles.catIcon, { backgroundColor: theme.background }, category === cat.name && { backgroundColor: theme.primary }]}>
                   <Feather
                     name={cat.icon as any}
                     size={20}
-                    color={category === cat.name ? '#FFF' : theme.colors.textSecondary}
+                    color={category === cat.name ? '#FFF' : theme.textSecondary}
                   />
                 </View>
-                <Text style={[styles.categoryText, category === cat.name && styles.categoryTextActive]}>{cat.name}</Text>
+                <Text style={[styles.categoryText, { color: theme.textSecondary }, category === cat.name && { color: theme.primary, fontWeight: 'bold' }]}>{cat.name}</Text>
               </TouchableOpacity>
             ))}
           </View>
 
           <View style={styles.row}>
             <View style={{ flex: 1, marginRight: 10 }}>
-              <Text style={styles.label}>Data</Text>
-              <TouchableOpacity style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
-                <Feather name="calendar" size={20} color={theme.colors.textPrimary} />
-                <Text style={styles.dateText}>{date.toLocaleDateString()}</Text>
+              <Text style={[styles.label, { color: theme.textPrimary }]}>Data</Text>
+              <TouchableOpacity style={[styles.dateButton, { borderColor: theme.border }]} onPress={() => setShowDatePicker(true)}>
+                <Feather name="calendar" size={20} color={theme.textPrimary} />
+                <Text style={[styles.dateText, { color: theme.textPrimary }]}>{date.toLocaleDateString()}</Text>
               </TouchableOpacity>
             </View>
 
             <View style={{ flex: 1, marginLeft: 10 }}>
-              <Text style={styles.label}>Recorrente?</Text>
-              <View style={styles.switchContainer}>
-                <Text style={styles.switchLabel}>{isRecurring ? 'Sim' : 'Não'}</Text>
+              <Text style={[styles.label, { color: theme.textPrimary }]}>Recorrente?</Text>
+              <View style={[styles.switchContainer, { borderColor: theme.border }]}>
+                <Text style={[styles.switchLabel, { color: theme.textPrimary }]}>{isRecurring ? 'Sim' : 'Não'}</Text>
                 <Switch
                   value={isRecurring}
                   onValueChange={setIsRecurring}
-                  trackColor={{ false: "#767577", true: theme.colors.primary }}
+                  trackColor={{ false: "#767577", true: theme.primary }}
                   thumbColor={"#f4f3f4"}
                 />
               </View>
@@ -193,30 +201,36 @@ export function AddTransactionScreen() {
 
           {!isIncome && (
             <View style={{ marginTop: 20 }}>
-              <Text style={styles.label}>Forma de Pagamento</Text>
-              <View style={styles.typeSelector}>
+              <Text style={[styles.label, { color: theme.textPrimary }]}>Forma de Pagamento</Text>
+              <View style={[styles.methodSelector, { backgroundColor: isDarkMode ? '#1A1A1A' : '#F5F5F5' }]}>
                 <TouchableOpacity
-                  style={[styles.typeButton, paymentMethod === 'cash' && styles.typeButtonActive]}
-                  onPress={() => setPaymentMethod('cash')}
+                  style={[styles.methodButton, paymentMethod === 'cash' && { backgroundColor: theme.surface }]}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setPaymentMethod('cash');
+                  }}
                 >
-                  <Feather name="dollar-sign" size={18} color={paymentMethod === 'cash' ? theme.colors.primary : theme.colors.textSecondary} />
-                  <Text style={[styles.typeText, { color: paymentMethod === 'cash' ? theme.colors.primary : theme.colors.textSecondary }]}>Dinheiro</Text>
+                  <Feather name="dollar-sign" size={18} color={paymentMethod === 'cash' ? theme.primary : theme.textSecondary} />
+                  <Text style={[styles.methodText, { color: paymentMethod === 'cash' ? theme.primary : theme.textSecondary }]}>Dinheiro</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.typeButton, paymentMethod === 'credit_card' && styles.typeButtonActive]}
-                  onPress={() => setPaymentMethod('credit_card')}
+                  style={[styles.methodButton, paymentMethod === 'credit_card' && { backgroundColor: theme.surface }]}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setPaymentMethod('credit_card');
+                  }}
                 >
-                  <Feather name="credit-card" size={18} color={paymentMethod === 'credit_card' ? theme.colors.primary : theme.colors.textSecondary} />
-                  <Text style={[styles.typeText, { color: paymentMethod === 'credit_card' ? theme.colors.primary : theme.colors.textSecondary }]}>Cartão</Text>
+                  <Feather name="credit-card" size={18} color={paymentMethod === 'credit_card' ? theme.primary : theme.textSecondary} />
+                  <Text style={[styles.methodText, { color: paymentMethod === 'credit_card' ? theme.primary : theme.textSecondary }]}>Cartão</Text>
                 </TouchableOpacity>
               </View>
 
               {paymentMethod === 'credit_card' && (
                 <View style={{ marginTop: 15 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <Text style={[styles.label, { marginTop: 0 }]}>Selecionar Cartão</Text>
+                    <Text style={[styles.label, { marginTop: 0, color: theme.textPrimary }]}>Selecionar Cartão</Text>
                     <TouchableOpacity onPress={() => navigation.navigate('Cards')}>
-                      <Text style={{ color: theme.colors.primary, fontSize: 12, fontWeight: 'bold' }}>Gerenciar</Text>
+                      <Text style={{ color: theme.primary, fontSize: 12, fontWeight: 'bold' }}>Gerenciar</Text>
                     </TouchableOpacity>
                   </View>
 
@@ -230,15 +244,18 @@ export function AddTransactionScreen() {
                             { backgroundColor: card.color + '20', borderColor: card.color },
                             cardId === card.id && { backgroundColor: card.color, borderWidth: 0 }
                           ]}
-                          onPress={() => setCardId(card.id)}
+                          onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            setCardId(card.id);
+                          }}
                         >
-                          <Text style={[styles.miniCardText, cardId === card.id && { color: '#FFF' }]}>{card.name}</Text>
+                          <Text style={[styles.miniCardText, { color: theme.textPrimary }, cardId === card.id && { color: '#FFF' }]}>{card.name}</Text>
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
                   ) : (
-                    <TouchableOpacity style={styles.errorContainer} onPress={() => navigation.navigate('Cards')}>
-                      <Text style={styles.errorText}>Nenhum cartão cadastrado. Toque para adicionar.</Text>
+                    <TouchableOpacity style={[styles.errorContainer, { backgroundColor: isDarkMode ? '#331111' : '#FFF5F5', borderColor: isDarkMode ? '#662222' : '#FED7D7' }]} onPress={() => navigation.navigate('Cards')}>
+                      <Text style={[styles.errorText, { color: isDarkMode ? '#FF8888' : '#C53030' }]}>Nenhum cartão cadastrado. Toque para adicionar.</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -251,7 +268,7 @@ export function AddTransactionScreen() {
               value={date}
               mode="date"
               display="default"
-              maximumDate={new Date()} // Can't create future transactions unless it's a payable (different screen)
+              maximumDate={new Date()}
               onChange={(event, selectedDate) => {
                 setShowDatePicker(false);
                 if (selectedDate) setDate(selectedDate);
@@ -268,84 +285,84 @@ export function AddTransactionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
-  header: {
-    paddingTop: 0,
-    paddingBottom: 30,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-  },
-  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  backButton: { padding: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12 },
-  headerTitle: { fontSize: 18, color: '#FFF', fontWeight: 'bold' },
+function createStyles(theme: any, baseTheme: any) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.background },
+    header: {
+      paddingBottom: 30,
+      paddingHorizontal: 20,
+      borderBottomLeftRadius: 30,
+      borderBottomRightRadius: 30,
+    },
+    headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    backButton: { padding: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12 },
+    headerTitle: { fontSize: 18, color: '#FFF', fontWeight: 'bold' },
 
-  amountContainer: { alignItems: 'center', justifyContent: 'center', flexDirection: 'row', marginBottom: 20 },
-  currencyPrefix: { fontSize: 24, color: 'rgba(255,255,255,0.8)', marginRight: 5, marginTop: 10 },
-  amountInput: { fontSize: 48, color: '#FFF', fontWeight: 'bold', minWidth: 100, textAlign: 'center' },
+    amountContainer: { alignItems: 'center', justifyContent: 'center', flexDirection: 'row', marginBottom: 20 },
+    currencyPrefix: { fontSize: 24, color: 'rgba(255,255,255,0.8)', marginRight: 5, marginTop: 10 },
+    amountInput: { fontSize: 48, color: '#FFF', fontWeight: 'bold', minWidth: 100, textAlign: 'center' },
 
-  typeSelector: { flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.1)', borderRadius: 16, padding: 4 },
-  typeButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 12 },
-  typeButtonActive: { backgroundColor: '#FFF' },
-  typeText: { marginLeft: 8, fontWeight: 'bold' },
+    typeSelectorHeader: { flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.1)', borderRadius: 16, padding: 4 },
+    typeButtonHeader: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 12 },
+    typeButtonActiveHeader: { backgroundColor: '#FFF' },
+    typeTextHeader: { marginLeft: 8, fontWeight: 'bold' },
 
-  content: { flex: 1 },
-  scrollContent: { padding: 20 },
-  inputGroup: { backgroundColor: '#FFF', borderRadius: 20, padding: 20, ...theme.shadows.default, marginBottom: 20 },
-  label: { fontSize: 14, fontWeight: '600', color: theme.colors.textPrimary, marginBottom: 10, marginTop: 10 },
+    content: { flex: 1 },
+    scrollContent: { padding: 20 },
+    inputGroup: { borderRadius: 20, padding: 20, ...baseTheme.shadows.default, marginBottom: 20 },
+    label: { fontSize: 14, fontWeight: '600', marginBottom: 10, marginTop: 10 },
 
-  categoriesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 10 },
-  categoryCard: {
-    width: '30%',
-    aspectRatio: 1,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 5
-  },
-  categoryCardActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.surface },
-  catIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: theme.colors.background, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  categoryText: { fontSize: 12, color: theme.colors.textSecondary },
-  categoryTextActive: { color: theme.colors.primary, fontWeight: 'bold' },
+    categoriesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 10 },
+    categoryCard: {
+      width: '30%',
+      aspectRatio: 1,
+      borderWidth: 1,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 5
+    },
+    catIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+    categoryText: { fontSize: 12 },
 
-  row: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 12
-  },
-  dateText: { marginLeft: 10, color: theme.colors.textPrimary },
+    row: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+    dateButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 14,
+      borderWidth: 1,
+      borderRadius: 12
+    },
+    dateText: { marginLeft: 10 },
 
-  switchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 10,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 12,
-    height: 52
-  },
-  switchLabel: { fontWeight: 'bold', color: theme.colors.textPrimary },
+    switchContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 10,
+      borderWidth: 1,
+      borderRadius: 12,
+      height: 52
+    },
+    switchLabel: { fontWeight: 'bold' },
 
-  footer: { marginBottom: 30 },
+    methodSelector: { flexDirection: 'row', borderRadius: 12, padding: 4, marginTop: 5 },
+    methodButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 10 },
+    methodText: { marginLeft: 8, fontWeight: '600', fontSize: 13 },
 
-  miniCard: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginRight: 10,
-    minWidth: 80,
-    alignItems: 'center'
-  },
-  miniCardText: { fontSize: 13, fontWeight: 'bold', color: theme.colors.textPrimary },
-  errorContainer: { padding: 15, backgroundColor: '#FFF5F5', borderRadius: 12, borderWidth: 1, borderColor: '#FED7D7' },
-  errorText: { color: '#C53030', fontSize: 13, textAlign: 'center' }
-});
+    footer: { marginBottom: 30 },
+
+    miniCard: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+      marginRight: 10,
+      minWidth: 80,
+      alignItems: 'center'
+    },
+    miniCardText: { fontSize: 13, fontWeight: 'bold' },
+    errorContainer: { padding: 15, borderRadius: 12, borderWidth: 1 },
+    errorText: { fontSize: 13, textAlign: 'center' }
+  });
+}

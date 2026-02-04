@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Alert, TouchableOpacity, StatusBar, ScrollView, TextInput } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -17,12 +16,14 @@ import { Payable } from '../../model/Payable';
 import { DEFAULT_CATEGORIES } from '../../model/Category';
 import { NotificationService } from '../../infra/notifications/NotificationService';
 
-import { theme } from '../../design/theme';
 import { TransactionList } from '../components/TransactionList';
 import { Card } from '../components/Card';
 import { BudgetProgressBar } from '../components/BudgetProgressBar';
+import { useAppTheme } from '../../design/ThemeContext';
 
 export function HomeScreen() {
+  const { theme, baseTheme, isDarkMode } = useAppTheme();
+  const styles = createStyles(theme, baseTheme);
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -31,7 +32,7 @@ export function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
 
-  const authViewModel = new AuthViewModel();
+  const [authViewModel] = useState(() => new AuthViewModel());
   const [homeViewModel] = useState(() => new HomeViewModel());
   const [budgetViewModel] = useState(() => new BudgetViewModel());
   const [payablesViewModel] = useState(() => new PayablesViewModel());
@@ -51,7 +52,6 @@ export function HomeScreen() {
       const pending = await payablesViewModel.getPending();
       setUpcomingPayables(pending.slice(0, 2));
 
-      // Schedule notifications for all pending payables
       pending.forEach(payable => {
         if (payable.id) {
           NotificationService.schedulePayableAlert(
@@ -119,8 +119,6 @@ export function HomeScreen() {
     );
   };
 
-
-
   const filteredTransactions = transactions.filter(t => {
     const description = t.description?.toLowerCase() || '';
     const cat = t.category?.toLowerCase() || '';
@@ -133,9 +131,7 @@ export function HomeScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-
-      {/* Background Gradient Header */}
-      <LinearGradient colors={theme.colors.gradientPrimary} style={styles.bgHeader} />
+      <LinearGradient colors={theme.gradientPrimary} style={styles.bgHeader} />
 
       <TransactionList
         transactions={filteredTransactions}
@@ -143,23 +139,22 @@ export function HomeScreen() {
         onDeleteItem={handleDelete}
         ListHeaderComponent={
           <View>
-            <View style={styles.headerTop}>
+            <View style={[styles.headerTop, { paddingTop: insets.top + 10 }]}>
               <View>
                 <Text style={styles.greetingText}>Olá,</Text>
                 <Text style={styles.usernameText}>Bem-vindo de volta</Text>
               </View>
               <TouchableOpacity
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  authViewModel.logout();
-                }}
                 style={styles.logoutButton}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  navigation.navigate('Settings');
+                }}
               >
-                <Feather name="log-out" size={20} color="#FFF" />
+                <Feather name="settings" size={20} color="#FFF" />
               </TouchableOpacity>
             </View>
 
-            {/* Month Selector */}
             <View style={styles.monthSelector}>
               <TouchableOpacity onPress={handlePrevMonth} style={styles.arrowArea}>
                 <Feather name="chevron-left" size={24} color="#FFF" />
@@ -170,278 +165,276 @@ export function HomeScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Balance Card */}
             <Card style={styles.balanceCard}>
               <View style={styles.balanceHeader}>
-                <Text style={styles.balanceLabel}>Saldo Atual</Text>
-                <Feather name={summary.total >= 0 ? "trending-up" : "trending-down"} size={20} color={summary.total >= 0 ? theme.colors.secondary : theme.colors.danger} />
+                <Text style={styles.balanceLabel}>Saldo atual</Text>
+                <Feather name={summary.total >= 0 ? "trending-up" : "trending-down"} size={20} color={summary.total >= 0 ? theme.secondary : theme.danger} />
               </View>
-              <Text style={styles.balanceValue}>R$ {summary.total.toFixed(2)}</Text>
+              <Text style={[styles.balanceValue, { color: theme.textPrimary }]}>R$ {summary.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</Text>
 
               <View style={styles.balanceRow}>
-                <View>
+                <View style={{ flex: 1 }}>
                   <View style={styles.balanceRowLabel}>
-                    <Feather name="arrow-up-circle" size={14} color={theme.colors.secondary} />
+                    <Feather name="arrow-up-circle" size={14} color={theme.secondary} />
                     <Text style={styles.miniLabel}> Receitas</Text>
                   </View>
-                  <Text style={[styles.miniValue, { color: theme.colors.secondary }]}>R$ {summary.income.toFixed(2)}</Text>
+                  <Text style={[styles.miniValue, { color: theme.secondary }]}>R$ {summary.income.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</Text>
                 </View>
                 <View style={styles.separator} />
-                <View>
+                <View style={{ flex: 1, paddingLeft: 20 }}>
                   <View style={styles.balanceRowLabel}>
-                    <Feather name="arrow-down-circle" size={14} color={theme.colors.danger} />
+                    <Feather name="arrow-down-circle" size={14} color={theme.danger} />
                     <Text style={styles.miniLabel}> Despesas</Text>
                   </View>
-                  <Text style={[styles.miniValue, { color: theme.colors.danger }]}>R$ {summary.expense.toFixed(2)}</Text>
+                  <Text style={[styles.miniValue, { color: theme.danger }]}>R$ {summary.expense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</Text>
                 </View>
               </View>
             </Card>
 
-            {/* Credit Card Section */}
-            {cardSummaries.length > 0 && (
-              <View style={styles.sectionContainer}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <Text style={styles.sectionTitle}>Faturas do Cartão</Text>
-                  <TouchableOpacity onPress={() => {
-                    Haptics.selectionAsync();
-                    navigation.navigate('Cards');
-                  }}>
-                    <Text style={styles.seeAll}>Gerenciar</Text>
-                  </TouchableOpacity>
-                </View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
-                  {cardSummaries.map((item, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={[styles.cardInvoiceItem, { borderLeftColor: item.card.color }]}
-                      onPress={() => navigation.navigate('Cards')}
-                    >
-                      <Text style={styles.cardInvoiceName}>{item.card.name}</Text>
-                      <Text style={styles.cardInvoiceAmount}>R$ {item.invoice.toFixed(2)}</Text>
-                      <View style={styles.limitBarBackground}>
-                        <View
-                          style={[
-                            styles.limitBarForeground,
-                            {
-                              backgroundColor: item.card.color,
-                              width: `${Math.min((item.invoice / (item.card.limit_amount || 1)) * 100, 100)}%`
-                            }
-                          ]}
-                        />
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
+            <View style={styles.sectionContainer}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Orçamentos</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Budgets')}>
+                  <Text style={[styles.seeAll, { color: theme.primary }]}>Ver mais</Text>
+                </TouchableOpacity>
               </View>
-            )}
+              {budgetStatus.length === 0 ? (
+                <Text style={{ color: theme.textSecondary, fontSize: 13, textAlign: 'center', marginTop: 10 }}>Nenhum orçamento definido.</Text>
+              ) : (
+                budgetStatus.slice(0, 3).map((item, index) => (
+                  <View key={index} style={{ marginBottom: 15 }}>
+                    <BudgetProgressBar
+                      category={item.category}
+                      budget={item.budget}
+                      spent={item.spent}
+                    />
+                  </View>
+                ))
+              )}
+            </View>
 
-            {/* Notifications / Payables Preview */}
-            {upcomingPayables.length > 0 && (
-              <View style={styles.sectionContainer}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={styles.sectionTitle}>Próximas Contas</Text>
-                  <TouchableOpacity onPress={() => {
-                    Haptics.selectionAsync();
-                    navigation.navigate('Contas');
-                  }}>
-                    <Text style={styles.seeAll}>Ver todas</Text>
-                  </TouchableOpacity>
-                </View>
+            <View style={styles.sectionContainer}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Próximas Contas</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('AppTabs', { screen: 'Payables' })}>
+                  <Text style={[styles.seeAll, { color: theme.primary }]}>Ver todas</Text>
+                </TouchableOpacity>
+              </View>
 
-                {upcomingPayables.map((item, index) => (
-                  <View key={index} style={styles.payableAlert}>
-                    <Feather name="alert-circle" size={18} color={theme.colors.danger} style={{ marginRight: 8 }} />
+              {upcomingPayables.length === 0 ? (
+                <Text style={{ color: theme.textSecondary, fontSize: 13, textAlign: 'center', marginTop: 10 }}>Nenhuma conta pendente.</Text>
+              ) : (
+                upcomingPayables.map((item, index) => (
+                  <View key={index} style={[styles.payableAlert, { backgroundColor: theme.surface }]}>
+                    <Feather name="alert-circle" size={18} color={theme.danger} style={{ marginRight: 8 }} />
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.payableAlertTitle}>{item.description}</Text>
+                      <Text style={[styles.payableAlertTitle, { color: theme.textPrimary }]}>{item.description}</Text>
                       <Text style={styles.payableAlertDate}>Vence: {new Date(item.due_date).toLocaleDateString('pt-BR')}</Text>
                     </View>
-                    <Text style={[styles.payableAlertAmount, { color: theme.colors.danger }]}>R$ {item.amount.toFixed(2)}</Text>
+                    <Text style={[styles.payableAlertAmount, { color: theme.danger }]}>R$ {item.amount.toFixed(2)}</Text>
                   </View>
-                ))}
+                ))
+              )}
+            </View>
+
+            <View style={styles.sectionContainer}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Meus Cartões</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Cards')}>
+                  <Text style={[styles.seeAll, { color: theme.primary }]}>Gerenciar</Text>
+                </TouchableOpacity>
               </View>
-            )}
 
-            {budgetStatus.some(b => b.budget > 0) && (
-              <View style={styles.sectionContainer}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <Text style={styles.sectionTitle}>Orçamentos</Text>
-                </View>
-
-                {budgetStatus.filter(b => b.budget > 0).slice(0, 3).map((item, index) => (
-                  <BudgetProgressBar
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {cardSummaries.map((item, index) => (
+                  <TouchableOpacity
                     key={index}
-                    category={item.category}
-                    budget={item.budget}
-                    spent={item.spent}
-                  />
+                    style={[styles.cardInvoiceItem, { borderLeftColor: item.card.color, backgroundColor: theme.surface }]}
+                    onPress={() => navigation.navigate('Cards')}
+                  >
+                    <Text style={styles.cardInvoiceName}>{item.card.name}</Text>
+                    <Text style={[styles.cardInvoiceAmount, { color: theme.textPrimary }]}>R$ {item.invoice.toFixed(2)}</Text>
+                    <View style={[styles.limitBarBackground, { backgroundColor: isDarkMode ? '#333' : '#EEE' }]}>
+                      <View
+                        style={[
+                          styles.limitBarForeground,
+                          {
+                            backgroundColor: item.card.color,
+                            width: `${Math.min((item.invoice / (item.card.limit_amount || 1)) * 100, 100)}%`
+                          }
+                        ]}
+                      />
+                    </View>
+                  </TouchableOpacity>
                 ))}
-              </View>
-            )}
+              </ScrollView>
+            </View>
 
-            <Text style={[styles.sectionTitle, { marginTop: 10 }]}>Transações</Text>
-
-            {/* Search and Filters */}
             <View style={styles.filterSection}>
-              <View style={styles.searchBar}>
-                <Feather name="search" size={16} color={theme.colors.textSecondary} />
+              <View style={[styles.searchBar, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                <Feather name="search" size={18} color={theme.textSecondary} />
                 <TextInput
-                  style={styles.searchInput}
-                  placeholder="Buscar..."
+                  style={[styles.searchInput, { color: theme.textPrimary }]}
+                  placeholder="Pesquisar..."
+                  placeholderTextColor={theme.placeholder}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
-                  placeholderTextColor={theme.colors.placeholder}
                 />
                 {searchQuery !== '' && (
                   <TouchableOpacity onPress={() => setSearchQuery('')}>
-                    <Feather name="x" size={16} color={theme.colors.textSecondary} />
+                    <Feather name="x" size={18} color={theme.textSecondary} />
                   </TouchableOpacity>
                 )}
               </View>
 
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
                 <TouchableOpacity
-                  style={[styles.categoryChip, selectedCategory === '' && styles.categoryChipSelected]}
+                  style={[
+                    styles.categoryChip,
+                    { backgroundColor: theme.surface, borderColor: theme.border },
+                    selectedCategory === '' && { backgroundColor: theme.primary, borderColor: theme.primary }
+                  ]}
                   onPress={() => setSelectedCategory('')}
                 >
-                  <Text style={[styles.categoryChipText, selectedCategory === '' && styles.categoryChipTextSelected]}>Todas</Text>
+                  <Text style={[
+                    styles.categoryChipText,
+                    { color: theme.textSecondary },
+                    selectedCategory === '' && { color: '#FFF' }
+                  ]}>Todas</Text>
                 </TouchableOpacity>
                 {DEFAULT_CATEGORIES.map((cat) => (
                   <TouchableOpacity
                     key={cat.name}
-                    style={[styles.categoryChip, selectedCategory === cat.name && styles.categoryChipSelected]}
+                    style={[
+                      styles.categoryChip,
+                      { backgroundColor: theme.surface, borderColor: theme.border },
+                      selectedCategory === cat.name && { backgroundColor: theme.primary, borderColor: theme.primary }
+                    ]}
                     onPress={() => setSelectedCategory(cat.name)}
                   >
-                    <Text style={[styles.categoryChipText, selectedCategory === cat.name && styles.categoryChipTextSelected]}>{cat.name}</Text>
+                    <Text style={[
+                      styles.categoryChipText,
+                      { color: theme.textSecondary },
+                      selectedCategory === cat.name && { color: '#FFF' }
+                    ]}>{cat.name}</Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
             </View>
           </View>
         }
-        contentContainerStyle={{ padding: 20, paddingTop: insets.top + 10, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: 20, paddingTop: 10, paddingBottom: 100 }}
       />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
-  bgHeader: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 250,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12
-  },
-  greetingText: { color: 'rgba(255,255,255,0.7)', fontSize: 16 },
-  usernameText: { color: '#FFF', fontSize: 20, fontWeight: 'bold' },
-  logoutButton: { padding: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12 },
+function createStyles(theme: any, baseTheme: any) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.background },
+    bgHeader: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: 250,
+      borderBottomLeftRadius: 30,
+      borderBottomRightRadius: 30,
+    },
+    headerTop: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12
+    },
+    greetingText: { color: 'rgba(255,255,255,0.7)', fontSize: 16 },
+    usernameText: { color: '#FFF', fontSize: 20, fontWeight: 'bold' },
+    logoutButton: { padding: 10, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12 },
 
-  monthSelector: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12
-  },
-  arrowArea: { padding: 10 },
-  monthLabel: { color: '#FFF', fontSize: 18, fontWeight: '600', minWidth: 140, textAlign: 'center' },
+    monthSelector: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 12
+    },
+    arrowArea: { padding: 10 },
+    monthLabel: { color: '#FFF', fontSize: 18, fontWeight: '600', minWidth: 140, textAlign: 'center' },
 
-  balanceCard: {
-    marginBottom: 16,
-    borderRadius: 20,
-    padding: 16,
-    ...theme.shadows.default
-  },
-  balanceHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
-  balanceLabel: { color: theme.colors.textSecondary, fontSize: 13 },
-  balanceValue: { color: theme.colors.textPrimary, fontSize: 28, fontWeight: 'bold', marginBottom: 12 },
-  balanceRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  separator: { width: 1, backgroundColor: theme.colors.border },
-  balanceRowLabel: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
-  miniLabel: { fontSize: 12, color: theme.colors.textSecondary },
-  miniValue: { fontSize: 16, fontWeight: 'bold' },
+    balanceCard: {
+      marginBottom: 16,
+      borderRadius: 20,
+      padding: 16,
+    },
+    balanceHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
+    balanceLabel: { color: theme.textSecondary, fontSize: 13 },
+    balanceValue: { fontSize: 28, fontWeight: 'bold', marginBottom: 12 },
+    balanceRow: { flexDirection: 'row', justifyContent: 'space-between' },
+    separator: { width: 1, backgroundColor: theme.border },
+    balanceRowLabel: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
+    miniLabel: { fontSize: 12, color: theme.textSecondary },
+    miniValue: { fontSize: 16, fontWeight: 'bold' },
 
-  sectionContainer: { marginBottom: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: theme.colors.textPrimary },
-  seeAll: { color: theme.colors.primary, fontSize: 14, fontWeight: '600' },
+    sectionContainer: { marginBottom: 20 },
+    sectionTitle: { fontSize: 18, fontWeight: 'bold' },
+    seeAll: { fontSize: 14, fontWeight: '600' },
 
-  payableAlert: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
-    padding: 12,
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: theme.colors.danger,
-    marginTop: 10,
-    ...theme.shadows.soft
-  },
-  payableAlertTitle: { fontWeight: '600', color: theme.colors.textPrimary },
-  payableAlertDate: { fontSize: 12, color: theme.colors.textSecondary },
-  payableAlertAmount: { fontWeight: 'bold' },
+    payableAlert: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 12,
+      borderRadius: 12,
+      borderLeftWidth: 4,
+      borderLeftColor: '#FF5252',
+      marginTop: 10,
+      ...baseTheme.shadows.soft
+    },
+    payableAlertTitle: { fontWeight: '600' },
+    payableAlertDate: { fontSize: 12, color: theme.textSecondary },
+    payableAlertAmount: { fontWeight: 'bold' },
 
-  cardInvoiceItem: {
-    backgroundColor: '#FFF',
-    padding: 12,
-    borderRadius: 16,
-    marginRight: 15,
-    minWidth: 160,
-    borderLeftWidth: 4,
-    ...theme.shadows.soft,
-    marginBottom: 5
-  },
-  cardInvoiceName: { fontSize: 12, color: theme.colors.textSecondary, marginBottom: 2 },
-  cardInvoiceAmount: { fontSize: 16, fontWeight: 'bold', color: theme.colors.textPrimary, marginBottom: 8 },
-  limitBarBackground: { height: 4, backgroundColor: theme.colors.border, borderRadius: 2, overflow: 'hidden' },
-  limitBarForeground: { height: '100%' },
-  filterSection: { marginTop: 15, marginBottom: 5 },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 40,
-    ...theme.shadows.soft,
-    marginBottom: 10
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 14,
-    color: theme.colors.textPrimary
-  },
-  categoriesScroll: {
-    marginBottom: 5
-  },
-  categoryChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 18,
-    backgroundColor: '#FFF',
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    ...theme.shadows.soft
-  },
-  categoryChipSelected: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  categoryChipText: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    fontWeight: '500'
-  },
-  categoryChipTextSelected: {
-    color: '#FFF'
-  }
-});
+    cardInvoiceItem: {
+      padding: 12,
+      borderRadius: 16,
+      marginRight: 15,
+      minWidth: 160,
+      borderLeftWidth: 4,
+      ...baseTheme.shadows.soft,
+      marginBottom: 5
+    },
+    cardInvoiceName: { fontSize: 12, color: theme.textSecondary, marginBottom: 2 },
+    cardInvoiceAmount: { fontSize: 16, fontWeight: 'bold', marginBottom: 8 },
+    limitBarBackground: { height: 4, borderRadius: 2, overflow: 'hidden' },
+    limitBarForeground: { height: '100%' },
+    filterSection: { marginTop: 15, marginBottom: 5 },
+    searchBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      height: 48,
+      ...baseTheme.shadows.soft,
+      marginBottom: 12,
+      borderWidth: 1,
+    },
+    searchInput: {
+      flex: 1,
+      marginLeft: 8,
+      fontSize: 14,
+    },
+    categoriesScroll: {
+      marginBottom: 5
+    },
+    categoryChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 18,
+      marginRight: 8,
+      borderWidth: 1,
+      ...baseTheme.shadows.soft
+    },
+    categoryChipText: {
+      fontSize: 12,
+      fontWeight: '500'
+    },
+  });
+}

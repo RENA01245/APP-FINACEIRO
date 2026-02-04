@@ -1,20 +1,23 @@
-
 import React, { useState, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, Button, TextInput, Alert, TouchableOpacity, Modal, StatusBar } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 
 import { NotificationService } from '../../infra/services/NotificationService';
 import { PayablesViewModel } from '../../viewmodel/PayablesViewModel';
 import { Payable } from '../../model/Payable';
-import { theme } from '../../design/theme';
+import { useAppTheme } from '../../design/ThemeContext';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { CustomInput } from '../components/CustomInput';
-import { Card } from '../components/Card';
 
 export function PayablesScreen() {
+  const { theme, baseTheme, isDarkMode } = useAppTheme();
+  const styles = createStyles(theme, baseTheme);
+  const insets = useSafeAreaInsets();
   const [payables, setPayables] = useState<Payable[]>([]);
   const [viewModel] = useState(() => new PayablesViewModel());
   const [modalVisible, setModalVisible] = useState(false);
@@ -68,6 +71,7 @@ export function PayablesScreen() {
       const [day, month, year] = dateStr.split('/').map(Number);
       const dateObj = new Date(year, month - 1, day);
 
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       setLoading(true);
       await viewModel.add(description, amount, dateObj);
       setModalVisible(false);
@@ -84,6 +88,7 @@ export function PayablesScreen() {
   };
 
   const handlePay = (payable: Payable) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedPayable(payable);
     setPaymentDate(new Date());
     setPaymentModalVisible(true);
@@ -93,6 +98,7 @@ export function PayablesScreen() {
     if (!selectedPayable) return;
 
     try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await viewModel.pay(selectedPayable, paymentDate);
       setPaymentModalVisible(false);
       loadData();
@@ -103,21 +109,21 @@ export function PayablesScreen() {
   };
 
   const renderItem = ({ item }: { item: Payable }) => (
-    <View style={styles.cardContainer}>
+    <View style={[styles.cardContainer, { backgroundColor: theme.surface }]}>
       <View style={styles.cardContent}>
-        <View style={styles.iconContainer}>
-          <Feather name="file-text" size={24} color={theme.colors.danger} />
+        <View style={[styles.iconContainer, { backgroundColor: theme.danger + '15' }]}>
+          <Feather name="file-text" size={24} color={theme.danger} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.description}>{item.description}</Text>
-          <Text style={styles.date}>Vence: {new Date(item.due_date).toLocaleDateString('pt-BR')}</Text>
+          <Text style={[styles.description, { color: theme.textPrimary }]}>{item.description}</Text>
+          <Text style={[styles.date, { color: theme.textSecondary }]}>Vence: {new Date(item.due_date).toLocaleDateString('pt-BR')}</Text>
         </View>
         <View style={{ alignItems: 'flex-end', marginRight: 10 }}>
-          <Text style={styles.amount}>R$ {item.amount.toFixed(2)}</Text>
+          <Text style={[styles.amount, { color: theme.danger }]}>R$ {item.amount.toFixed(2)}</Text>
         </View>
       </View>
 
-      <TouchableOpacity style={styles.payButton} onPress={() => handlePay(item)}>
+      <TouchableOpacity style={[styles.payButton, { backgroundColor: theme.secondary }]} onPress={() => handlePay(item)}>
         <Text style={styles.payButtonText}>Pagar</Text>
         <Feather name="check-circle" size={16} color="#FFF" style={{ marginLeft: 5 }} />
       </TouchableOpacity>
@@ -127,11 +133,11 @@ export function PayablesScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <LinearGradient colors={theme.colors.gradientPrimary} style={styles.header}>
+      <LinearGradient colors={theme.gradientPrimary} style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>Contas a Pagar</Text>
           <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.addButton}>
-            <Feather name="plus" size={24} color={theme.colors.primary} />
+            <Feather name="plus" size={24} color={theme.primary} />
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -141,22 +147,25 @@ export function PayablesScreen() {
         keyExtractor={item => item.id || Math.random().toString()}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Feather name="check-circle" size={64} color={theme.colors.placeholder} />
-            <Text style={styles.emptyText}>Tudo em dia!</Text>
-            <Text style={styles.emptySubText}>Nenhuma conta pendente.</Text>
+            <View style={[styles.emptyIconCircle, { backgroundColor: theme.surface }]}>
+              <Feather name="check-circle" size={40} color={theme.placeholder} />
+            </View>
+            <Text style={[styles.emptyText, { color: theme.textPrimary }]}>Tudo em dia!</Text>
+            <Text style={[styles.emptySubText, { color: theme.textSecondary }]}>Nenhuma conta pendente.</Text>
           </View>
         }
       />
 
       <Modal visible={modalVisible} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Nova Conta</Text>
+              <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>Nova Conta</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Feather name="x" size={24} color={theme.colors.textPrimary} />
+                <Feather name="x" size={24} color={theme.textPrimary} />
               </TouchableOpacity>
             </View>
 
@@ -195,23 +204,23 @@ export function PayablesScreen() {
       {/* Payment Confirmation Modal */}
       <Modal visible={paymentModalVisible} animationType="fade" transparent={true}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { marginHorizontal: 40 }]}>
-            <Text style={styles.modalTitle}>Confirmar Pagamento</Text>
+          <View style={[styles.modalContent, { backgroundColor: theme.surface, marginHorizontal: 40 }]}>
+            <Text style={[styles.modalTitle, { textAlign: 'center', marginBottom: 20, color: theme.textPrimary }]}>Confirmar Pagamento</Text>
 
             {selectedPayable && (
-              <Text style={{ marginBottom: 20, fontSize: 16, textAlign: 'center', color: theme.colors.textSecondary }}>
-                Confirmar pagamento de <Text style={{ fontWeight: 'bold', color: theme.colors.textPrimary }}>{selectedPayable.description}</Text> no valor de <Text style={{ fontWeight: 'bold', color: theme.colors.danger }}>R$ {selectedPayable.amount.toFixed(2)}</Text>?
+              <Text style={{ marginBottom: 20, fontSize: 16, textAlign: 'center', color: theme.textSecondary }}>
+                Confirmar pagamento de <Text style={{ fontWeight: 'bold', color: theme.textPrimary }}>{selectedPayable.description}</Text> no valor de <Text style={{ fontWeight: 'bold', color: theme.danger }}>R$ {selectedPayable.amount.toFixed(2)}</Text>?
               </Text>
             )}
 
-            <Text style={{ marginBottom: 8, fontWeight: 'bold', color: theme.colors.textPrimary, alignSelf: 'flex-start' }}>Data do Pagamento:</Text>
+            <Text style={{ marginBottom: 8, fontWeight: 'bold', color: theme.textPrimary, alignSelf: 'flex-start' }}>Data do Pagamento:</Text>
 
             <TouchableOpacity
-              style={styles.dateButton}
+              style={[styles.dateButton, { borderColor: theme.border, backgroundColor: theme.background }]}
               onPress={() => setShowPaymentDatePicker(true)}
             >
-              <Feather name="calendar" size={20} color={theme.colors.textPrimary} />
-              <Text style={{ marginLeft: 10, color: theme.colors.textPrimary }}>{paymentDate.toLocaleDateString('pt-BR')}</Text>
+              <Feather name="calendar" size={20} color={theme.textPrimary} />
+              <Text style={{ marginLeft: 10, color: theme.textPrimary }}>{paymentDate.toLocaleDateString('pt-BR')}</Text>
             </TouchableOpacity>
 
             {showPaymentDatePicker && (
@@ -238,78 +247,84 @@ export function PayablesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
-  header: {
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-  },
-  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#FFF' },
-  addButton: {
-    backgroundColor: '#FFF',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...theme.shadows.default
-  },
+function createStyles(theme: any, baseTheme: any) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.background },
+    header: {
+      paddingBottom: 20,
+      paddingHorizontal: 20,
+      borderBottomLeftRadius: 30,
+      borderBottomRightRadius: 30,
+    },
+    headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#FFF' },
+    addButton: {
+      backgroundColor: '#FFF',
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...baseTheme.shadows.default
+    },
 
-  list: { padding: 20 },
-  cardContainer: {
-    backgroundColor: '#FFF',
-    borderRadius: 16,
-    marginBottom: 12,
-    ...theme.shadows.default,
-    overflow: 'hidden'
-  },
-  cardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFEBEE',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12
-  },
-  description: { fontSize: 16, fontWeight: 'bold', color: theme.colors.textPrimary },
-  date: { fontSize: 12, color: theme.colors.textSecondary },
-  amount: { fontSize: 18, fontWeight: 'bold', color: theme.colors.danger },
+    list: { padding: 20 },
+    cardContainer: {
+      borderRadius: 16,
+      marginBottom: 12,
+      ...baseTheme.shadows.soft,
+      overflow: 'hidden'
+    },
+    cardContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 16
+    },
+    iconContainer: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 12
+    },
+    description: { fontSize: 16, fontWeight: 'bold' },
+    date: { fontSize: 12 },
+    amount: { fontSize: 18, fontWeight: 'bold' },
 
-  payButton: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.secondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10
-  },
-  payButtonText: { color: '#fff', fontWeight: 'bold' },
+    payButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 12
+    },
+    payButtonText: { color: '#fff', fontWeight: 'bold' },
 
-  emptyContainer: { alignItems: 'center', justifyContent: 'center', marginTop: 80 },
-  emptyText: { fontSize: 22, fontWeight: 'bold', color: theme.colors.textPrimary, marginTop: 20 },
-  emptySubText: { fontSize: 16, color: theme.colors.textSecondary, marginTop: 5 },
+    emptyContainer: { alignItems: 'center', justifyContent: 'center', marginTop: 80 },
+    emptyIconCircle: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 20,
+      ...baseTheme.shadows.soft
+    },
+    emptyText: { fontSize: 22, fontWeight: 'bold', marginTop: 10 },
+    emptySubText: { fontSize: 15, marginTop: 5 },
 
-  modalOverlay: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 20 },
-  modalContent: { backgroundColor: '#fff', padding: 20, borderRadius: 20, ...theme.shadows.default },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', color: theme.colors.textPrimary },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 12,
-    marginBottom: 20
-  },
-  modalButtons: { flexDirection: 'row', justifyContent: 'space-between' }
-});
+    modalOverlay: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 20 },
+    modalContent: { padding: 24, borderRadius: 24, ...baseTheme.shadows.default },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+    modalTitle: { fontSize: 20, fontWeight: 'bold' },
+    dateButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 14,
+      borderWidth: 1,
+      borderRadius: 12,
+      marginBottom: 24
+    },
+    modalButtons: { flexDirection: 'row', justifyContent: 'space-between' }
+  });
+}

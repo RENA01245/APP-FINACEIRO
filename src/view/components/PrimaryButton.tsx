@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { theme } from '../../design/theme';
+import { useAppTheme } from '../../design/ThemeContext';
 
 interface PrimaryButtonProps {
     title: string;
@@ -23,16 +22,18 @@ export function PrimaryButton({
     textStyle,
     variant = 'primary'
 }: PrimaryButtonProps) {
+    const { theme, baseTheme, isDarkMode } = useAppTheme();
+    const styles = createStyles(theme, baseTheme);
 
     const isPrimary = variant === 'primary';
     const isDanger = variant === 'danger';
     const isOutline = variant === 'outline';
 
     const getGradientColors = () => {
-        if (disabled) return ['#E0E0E0', '#BDBDBD'] as const;
-        if (isDanger) return ['#FF5252', '#D32F2F'] as const;
-        if (isOutline || variant === 'secondary') return undefined; // No gradient for outline/secondary
-        return theme.colors.gradientPrimary;
+        if (disabled) return isDarkMode ? (['#333333', '#444444'] as const) : (['#E0E0E0', '#BDBDBD'] as const);
+        if (isDanger) return isDarkMode ? (['#882222', '#AA3333'] as const) : (['#FF5252', '#D32F2F'] as const);
+        if (isOutline || variant === 'secondary') return undefined;
+        return theme.gradientPrimary;
     };
 
     const content = (
@@ -42,18 +43,18 @@ export function PrimaryButton({
             activeOpacity={0.8}
             style={[
                 styles.container,
-                isOutline && styles.outlineContainer,
-                variant === 'secondary' && styles.secondaryContainer,
+                isOutline && { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: theme.primary },
+                variant === 'secondary' && { backgroundColor: isDarkMode ? '#2C2C2C' : '#E8EAF6' },
                 style
             ]}
         >
             {loading ? (
-                <ActivityIndicator color={isOutline ? theme.colors.primary : '#FFF'} />
+                <ActivityIndicator color={isOutline ? theme.primary : '#FFF'} />
             ) : (
                 <Text style={[
                     styles.text,
-                    isOutline && styles.outlineText,
-                    variant === 'secondary' && styles.secondaryText,
+                    isOutline && { color: theme.primary },
+                    variant === 'secondary' && { color: theme.primary },
                     textStyle
                 ]}>
                     {title}
@@ -67,7 +68,7 @@ export function PrimaryButton({
     if (colors) {
         return (
             <LinearGradient
-                colors={colors}
+                colors={colors as readonly [string, string, ...string[]]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={[styles.gradient, style]}
@@ -80,37 +81,25 @@ export function PrimaryButton({
     return content;
 }
 
-const styles = StyleSheet.create({
-    gradient: {
-        borderRadius: theme.borderRadius.pill,
-        width: '100%',
-        ...theme.shadows.default,
-    },
-    container: {
-        paddingVertical: theme.spacing.md,
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '100%',
-        borderRadius: theme.borderRadius.pill,
-    },
-    text: {
-        color: '#FFF',
-        fontSize: theme.typography.sizes.md,
-        fontWeight: 'bold',
-        letterSpacing: 0.5,
-    },
-    outlineContainer: {
-        backgroundColor: 'transparent',
-        borderWidth: 1.5,
-        borderColor: theme.colors.primary,
-    },
-    outlineText: {
-        color: theme.colors.primary,
-    },
-    secondaryContainer: {
-        backgroundColor: '#E8EAF6',
-    },
-    secondaryText: {
-        color: theme.colors.primary,
-    }
-});
+function createStyles(theme: any, baseTheme: any) {
+    return StyleSheet.create({
+        gradient: {
+            borderRadius: baseTheme.borderRadius.pill,
+            width: '100%',
+            ...baseTheme.shadows.default,
+        },
+        container: {
+            paddingVertical: baseTheme.spacing.md,
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
+            borderRadius: baseTheme.borderRadius.pill,
+        },
+        text: {
+            color: '#FFF',
+            fontSize: baseTheme.typography.sizes.md,
+            fontWeight: 'bold',
+            letterSpacing: 0.5,
+        }
+    });
+}

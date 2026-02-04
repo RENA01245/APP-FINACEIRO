@@ -1,12 +1,11 @@
-
 import React from 'react';
 import { View, Text, StyleSheet, SectionList, TouchableOpacity, ViewStyle } from 'react-native';
 import { Transaction } from '../../model/Transaction';
-import { theme } from '../../design/theme';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { RectButton, Swipeable } from 'react-native-gesture-handler';
 import Animated, { FadeInRight, FadeOutLeft } from 'react-native-reanimated';
+import { useAppTheme } from '../../design/ThemeContext';
 
 interface TransactionListProps {
     transactions: Transaction[];
@@ -42,7 +41,6 @@ const formatDateSection = (date: Date) => {
 const groupTransactions = (transactions: Transaction[]) => {
     const groups: { [key: string]: Transaction[] } = {};
 
-    // Sort transactions by date descending
     const sorted = [...transactions].sort((a, b) => {
         const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
         const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -62,6 +60,8 @@ const groupTransactions = (transactions: Transaction[]) => {
 };
 
 export function TransactionList({ transactions, onPressItem, onDeleteItem, ListHeaderComponent, contentContainerStyle }: TransactionListProps) {
+    const { theme, baseTheme, isDarkMode } = useAppTheme();
+    const styles = createStyles(theme, baseTheme);
 
     const renderRightActions = (id: string) => {
         return (
@@ -93,7 +93,7 @@ export function TransactionList({ transactions, onPressItem, onDeleteItem, ListH
 
     const renderItem = ({ item }: { item: Transaction }) => {
         const isExpense = item.type === 'expense';
-        const amountColor = isExpense ? theme.colors.danger : theme.colors.secondary;
+        const amountColor = isExpense ? theme.danger : theme.secondary;
         const iconName = getCategoryIcon(item.category || '');
 
         return (
@@ -116,13 +116,13 @@ export function TransactionList({ transactions, onPressItem, onDeleteItem, ListH
                         }}
                         activeOpacity={0.7}
                     >
-                        <View style={[styles.iconContainer, { backgroundColor: isExpense ? '#FFF2F2' : '#F2FBF2' }]}>
+                        <View style={[styles.iconContainer, { backgroundColor: isDarkMode ? (isExpense ? '#2D1F1F' : '#1F2D21') : (isExpense ? '#FFF2F2' : '#F2FBF2') }]}>
                             <Feather name={iconName} size={16} color={amountColor} />
                         </View>
 
                         <View style={styles.details}>
-                            <Text style={styles.description} numberOfLines={1}>{item.description}</Text>
-                            <Text style={styles.category}>{item.category || 'Geral'}</Text>
+                            <Text style={[styles.description, { color: theme.textPrimary }]} numberOfLines={1}>{item.description}</Text>
+                            <Text style={[styles.category, { color: theme.textSecondary }]}>{item.category || 'Geral'}</Text>
                         </View>
 
                         <View style={styles.amountContainer}>
@@ -145,7 +145,7 @@ export function TransactionList({ transactions, onPressItem, onDeleteItem, ListH
             renderItem={renderItem}
             renderSectionHeader={({ section: { title } }) => (
                 <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionHeaderText}>{title}</Text>
+                    <Text style={[styles.sectionHeaderText, { color: theme.textSecondary }]}>{title}</Text>
                 </View>
             )}
             ListHeaderComponent={ListHeaderComponent}
@@ -154,108 +154,103 @@ export function TransactionList({ transactions, onPressItem, onDeleteItem, ListH
             stickySectionHeadersEnabled={false}
             ListEmptyComponent={
                 <View style={styles.emptyContainer}>
-                    <View style={styles.emptyIconCircle}>
-                        <Feather name="file-text" size={32} color={theme.colors.placeholder} />
+                    <View style={[styles.emptyIconCircle, { backgroundColor: theme.surface }]}>
+                        <Feather name="file-text" size={32} color={theme.placeholder} />
                     </View>
-                    <Text style={styles.emptyTitle}>Sem transações</Text>
-                    <Text style={styles.emptySubtitle}>Seu extrato aparecerá aqui.</Text>
+                    <Text style={[styles.emptyTitle, { color: theme.textPrimary }]}>Sem transações</Text>
+                    <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>Seu extrato aparecerá aqui.</Text>
                 </View>
             }
         />
     );
 }
 
-const styles = StyleSheet.create({
-    listContent: {
-        paddingBottom: 100,
-    },
-    sectionHeader: {
-        paddingTop: 16,
-        paddingBottom: 8,
-        backgroundColor: 'transparent',
-    },
-    sectionHeaderText: {
-        fontSize: 12,
-        fontWeight: 'bold',
-        color: theme.colors.textSecondary,
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-    },
-    itemContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        backgroundColor: theme.colors.surface,
-        borderBottomWidth: 0.5,
-        borderBottomColor: theme.colors.border + '40',
-        borderRadius: 4, // Very subtle rounding for "integrated" look
-    },
-    iconContainer: {
-        width: 36,
-        height: 36,
-        borderRadius: 12, // More Material 3 square-rounded
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 12,
-    },
-    details: {
-        flex: 1,
-        marginRight: 8,
-    },
-    description: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: theme.colors.textPrimary,
-        marginBottom: 2,
-    },
-    category: {
-        fontSize: 12,
-        color: theme.colors.textSecondary,
-    },
-    amountContainer: {
-        alignItems: 'flex-end',
-    },
-    amount: {
-        fontSize: 15,
-        fontWeight: 'bold',
-    },
-    deleteAction: {
-        backgroundColor: theme.colors.danger,
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: 70,
-        height: '100%',
-    },
-    editAction: {
-        backgroundColor: theme.colors.primary,
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: 70,
-        height: '100%',
-    },
-    emptyContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingTop: 60,
-    },
-    emptyIconCircle: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: '#F8F9FA',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 16,
-    },
-    emptyTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: theme.colors.textPrimary,
-        marginBottom: 4,
-    },
-    emptySubtitle: {
-        color: theme.colors.textSecondary,
-        fontSize: 14,
-    }
-});
+function createStyles(theme: any, baseTheme: any) {
+    return StyleSheet.create({
+        listContent: {
+            paddingBottom: 100,
+        },
+        sectionHeader: {
+            paddingTop: 16,
+            paddingBottom: 8,
+            backgroundColor: 'transparent',
+        },
+        sectionHeaderText: {
+            fontSize: 12,
+            fontWeight: 'bold',
+            textTransform: 'uppercase',
+            letterSpacing: 1,
+        },
+        itemContainer: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingVertical: 12,
+            paddingHorizontal: 16,
+            backgroundColor: theme.surface,
+            borderBottomWidth: 0.5,
+            borderBottomColor: theme.border + '40',
+        },
+        iconContainer: {
+            width: 36,
+            height: 36,
+            borderRadius: 12,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginRight: 12,
+        },
+        details: {
+            flex: 1,
+            marginRight: 8,
+        },
+        description: {
+            fontSize: 14,
+            fontWeight: '600',
+            marginBottom: 2,
+        },
+        category: {
+            fontSize: 12,
+        },
+        amountContainer: {
+            alignItems: 'flex-end',
+        },
+        amount: {
+            fontSize: 15,
+            fontWeight: 'bold',
+        },
+        deleteAction: {
+            backgroundColor: theme.danger,
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: 70,
+            height: '100%',
+        },
+        editAction: {
+            backgroundColor: theme.primary,
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: 70,
+            height: '100%',
+        },
+        emptyContainer: {
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingTop: 60,
+        },
+        emptyIconCircle: {
+            width: 80,
+            height: 80,
+            borderRadius: 40,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: 16,
+        },
+        emptyTitle: {
+            fontSize: 18,
+            fontWeight: 'bold',
+            marginBottom: 4,
+        },
+        emptySubtitle: {
+            fontSize: 14,
+        }
+    });
+}

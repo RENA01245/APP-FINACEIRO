@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity, ActivityIndicator, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,11 +8,13 @@ import { useFocusEffect, useRoute, useNavigation } from '@react-navigation/nativ
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { ReportsViewModel } from '../../viewmodel/ReportsViewModel';
-import { theme } from '../../design/theme';
+import { useAppTheme } from '../../design/ThemeContext';
 
 const screenWidth = Dimensions.get('window').width;
 
 export function ReportsScreen() {
+  const { theme, baseTheme, isDarkMode } = useAppTheme();
+  const styles = createStyles(theme, baseTheme);
   const [viewModel] = useState(() => new ReportsViewModel());
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -66,20 +67,23 @@ export function ReportsScreen() {
   };
 
   const chartConfig = {
-    backgroundGradientFrom: "#ffffff",
-    backgroundGradientTo: "#ffffff",
-    color: (opacity = 1) => theme.colors.primary,
+    backgroundGradientFrom: theme.surface,
+    backgroundGradientTo: theme.surface,
+    color: (opacity = 1) => theme.primary,
     strokeWidth: 2,
     barPercentage: 0.5,
     decimalPlaces: 2,
-    labelColor: (opacity = 1) => theme.colors.textSecondary,
+    labelColor: (opacity = 1) => theme.textSecondary,
+    propsForLabels: {
+      fontSize: 10,
+    }
   };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      <LinearGradient colors={theme.colors.gradientPrimary} style={[styles.header, { paddingTop: insets.top + 10 }]}>
+      <LinearGradient colors={theme.gradientPrimary} style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerTop}>
           <TouchableOpacity
             onPress={() => {
@@ -106,18 +110,18 @@ export function ReportsScreen() {
       </LinearGradient>
 
       {loading ? (
-        <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginTop: 50 }} />
+        <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 50 }} />
       ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
           <View style={styles.chartContainer}>
-            <Text style={styles.chartTitle}>Principais Gastos</Text>
+            <Text style={[styles.chartTitle, { color: theme.textPrimary }]}>Principais Gastos</Text>
             {pieData.length > 0 ? (
               <>
                 <PieChart
                   data={pieData.map(item => ({
                     ...item,
-                    legendFontColor: theme.colors.textSecondary,
+                    legendFontColor: theme.textSecondary,
                     legendFontSize: 12
                   }))}
                   width={screenWidth - 40}
@@ -130,33 +134,33 @@ export function ReportsScreen() {
                   absolute
                 />
 
-                <View style={styles.categoryList}>
+                <View style={[styles.categoryList, { borderTopColor: theme.border + '50' }]}>
                   {pieData.sort((a, b) => b.amount - a.amount).map((item, index) => (
                     <View key={index} style={styles.categoryItem}>
                       <View style={[styles.categoryDot, { backgroundColor: item.color }]} />
-                      <Text style={styles.categoryName}>{item.name}</Text>
-                      <Text style={styles.categoryAmount}>R$ {item.amount.toFixed(2)}</Text>
+                      <Text style={[styles.categoryName, { color: theme.textPrimary }]}>{item.name}</Text>
+                      <Text style={[styles.categoryAmount, { color: theme.textPrimary }]}>R$ {item.amount.toFixed(2)}</Text>
                     </View>
                   ))}
                 </View>
 
-                <View style={styles.totalBadge}>
-                  <Text style={styles.totalLabel}>Total no Mês</Text>
-                  <Text style={styles.totalValue}>R$ {totalExpense.toFixed(2)}</Text>
+                <View style={[styles.totalBadge, { backgroundColor: theme.danger + '10' }]}>
+                  <Text style={[styles.totalLabel, { color: theme.textSecondary }]}>Total no Mês</Text>
+                  <Text style={[styles.totalValue, { color: theme.danger }]}>R$ {totalExpense.toFixed(2)}</Text>
                 </View>
               </>
             ) : (
               <View style={styles.emptyContainer}>
-                <View style={styles.emptyIconCircle}>
-                  <Feather name="pie-chart" size={32} color={theme.colors.placeholder} />
+                <View style={[styles.emptyIconCircle, { backgroundColor: theme.background }]}>
+                  <Feather name="pie-chart" size={32} color={theme.placeholder} />
                 </View>
-                <Text style={styles.emptyText}>Nenhuma despesa encontrada</Text>
+                <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Nenhuma despesa encontrada</Text>
               </View>
             )}
           </View>
 
           <View style={styles.chartContainer}>
-            <Text style={styles.chartTitle}>Balanço Mensal</Text>
+            <Text style={[styles.chartTitle, { color: theme.textPrimary }]}>Balanço Mensal</Text>
             {barData && (barData.datasets[0].data[0] > 0 || barData.datasets[0].data[1] > 0) ? (
               <BarChart
                 data={barData}
@@ -166,7 +170,7 @@ export function ReportsScreen() {
                 yAxisSuffix=""
                 chartConfig={{
                   ...chartConfig,
-                  color: (opacity = 1) => theme.colors.secondary,
+                  color: (opacity = 1) => theme.secondary,
                 }}
                 verticalLabelRotation={0}
                 showValuesOnTopOfBars
@@ -178,10 +182,10 @@ export function ReportsScreen() {
               />
             ) : (
               <View style={styles.emptyContainer}>
-                <View style={styles.emptyIconCircle}>
-                  <Feather name="bar-chart-2" size={32} color={theme.colors.placeholder} />
+                <View style={[styles.emptyIconCircle, { backgroundColor: theme.background }]}>
+                  <Feather name="bar-chart-2" size={32} color={theme.placeholder} />
                 </View>
-                <Text style={styles.emptyText}>Sem dados de comparação</Text>
+                <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Sem dados de comparação</Text>
               </View>
             )}
           </View>
@@ -192,113 +196,105 @@ export function ReportsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
-  header: {
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-  },
-  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  backButton: { padding: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12 },
-  headerTitle: { fontSize: 18, color: '#FFF', fontWeight: 'bold' },
+function createStyles(theme: any, baseTheme: any) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.background },
+    header: {
+      paddingBottom: 20,
+      paddingHorizontal: 20,
+      borderBottomLeftRadius: 30,
+      borderBottomRightRadius: 30,
+    },
+    headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+    backButton: { padding: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12 },
+    headerTitle: { fontSize: 18, color: '#FFF', fontWeight: 'bold' },
 
-  monthSelector: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  arrowArea: { padding: 10 },
-  monthLabelText: { color: '#FFF', fontSize: 18, fontWeight: '600', minWidth: 140, textAlign: 'center' },
+    monthSelector: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    arrowArea: { padding: 10 },
+    monthLabelText: { color: '#FFF', fontSize: 18, fontWeight: '600', minWidth: 140, textAlign: 'center' },
 
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  chartContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 20,
-    marginHorizontal: 20,
-    marginTop: 20,
-    ...theme.shadows.soft,
-    alignItems: 'center'
-  },
-  chartTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 16,
-    color: theme.colors.textPrimary,
-    alignSelf: 'flex-start'
-  },
-  categoryList: {
-    width: '100%',
-    marginTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border + '50',
-    paddingTop: 15,
-  },
-  categoryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  categoryDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 10,
-  },
-  categoryName: {
-    flex: 1,
-    fontSize: 14,
-    color: theme.colors.textPrimary,
-    fontWeight: '500',
-  },
-  categoryAmount: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: theme.colors.textPrimary,
-  },
-  totalBadge: {
-    marginTop: 10,
-    backgroundColor: theme.colors.danger + '10',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 16,
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  totalLabel: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    fontWeight: '500',
-  },
-  totalValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: theme.colors.danger,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  emptyIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: theme.colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  emptyText: {
-    color: theme.colors.textSecondary,
-    fontSize: 14,
-    fontWeight: '500',
-  }
-});
+    scrollContent: {
+      paddingBottom: 40,
+    },
+    chartContainer: {
+      backgroundColor: theme.surface,
+      borderRadius: 24,
+      padding: 20,
+      marginHorizontal: 20,
+      marginTop: 20,
+      ...baseTheme.shadows.soft,
+      alignItems: 'center'
+    },
+    chartTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      marginBottom: 16,
+      alignSelf: 'flex-start'
+    },
+    categoryList: {
+      width: '100%',
+      marginTop: 10,
+      borderTopWidth: 1,
+      paddingTop: 15,
+    },
+    categoryItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    categoryDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      marginRight: 10,
+    },
+    categoryName: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    categoryAmount: {
+      fontSize: 14,
+      fontWeight: 'bold',
+    },
+    totalBadge: {
+      marginTop: 10,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 16,
+      width: '100%',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    totalLabel: {
+      fontSize: 14,
+      fontWeight: '500',
+    },
+    totalValue: {
+      fontSize: 18,
+      fontWeight: 'bold',
+    },
+    emptyContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 40,
+    },
+    emptyIconCircle: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 12,
+    },
+    emptyText: {
+      fontSize: 14,
+      fontWeight: '500',
+    }
+  });
+}

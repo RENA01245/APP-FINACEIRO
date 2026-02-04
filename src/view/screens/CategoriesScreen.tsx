@@ -1,30 +1,33 @@
-
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, Alert, ScrollView, TextInput, StatusBar } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, Alert, ScrollView, StatusBar } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 
-import { theme } from '../../design/theme';
-import { Category, DEFAULT_CATEGORIES } from '../../model/Category';
+import { Category } from '../../model/Category';
 import { CategoryViewModel } from '../../viewmodel/CategoryViewModel';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { CustomInput } from '../components/CustomInput';
+import { useAppTheme } from '../../design/ThemeContext';
 
-const AVAILABLE_ICONS = ['coffee', 'truck', 'home', 'grid', 'activity', 'shopping-bag', 'briefcase', 'gift', 'book', 'wifi', 'smartphone', 'dollar-sign', 'umbrella', 'tool'];
+const AVAILABLE_ICONS: (keyof typeof Feather.glyphMap)[] = ['coffee', 'truck', 'home', 'grid', 'activity', 'shopping-bag', 'briefcase', 'gift', 'book', 'wifi', 'smartphone', 'dollar-sign', 'umbrella', 'tool'];
 const AVAILABLE_COLORS = ['#FF9800', '#2196F3', '#4CAF50', '#9C27B0', '#F44336', '#607D8B', '#E91E63', '#3F51B5', '#009688', '#795548'];
 
 export function CategoriesScreen() {
-    const navigation = useNavigation();
+    const { theme, baseTheme, isDarkMode } = useAppTheme();
+    const styles = createStyles(theme, baseTheme);
+    const insets = useSafeAreaInsets();
+    const navigation = useNavigation<any>();
     const [viewModel] = useState(() => new CategoryViewModel());
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
 
-    // New Category Form
-    const [newName, setNewName] = useState('');
-    const [newIcon, setNewIcon] = useState('grid');
-    const [newColor, setNewColor] = useState(AVAILABLE_COLORS[0]);
+    const [name, setName] = useState('');
+    const [selectedIcon, setSelectedIcon] = useState<(keyof typeof Feather.glyphMap)>(AVAILABLE_ICONS[0]);
+    const [selectedColor, setSelectedColor] = useState(AVAILABLE_COLORS[0]);
     const [submitting, setSubmitting] = useState(false);
 
     const loadCategories = async () => {
@@ -46,18 +49,16 @@ export function CategoriesScreen() {
     );
 
     const handleAddCategory = async () => {
-        if (!newName.trim()) {
-            Alert.alert('Erro', 'Informe o nome da categoria');
+        if (!name) {
+            Alert.alert('Erro', 'O nome é obrigatório.');
             return;
         }
 
         setSubmitting(true);
         try {
-            await viewModel.addCategory(newName, newIcon, newColor);
+            await viewModel.addCategory(name, selectedIcon, selectedColor);
             setModalVisible(false);
-            setNewName('');
-            setNewIcon('grid');
-            setNewColor(AVAILABLE_COLORS[0]);
+            setName('');
             loadCategories();
         } catch (error: any) {
             Alert.alert('Erro', error.message);
@@ -66,49 +67,45 @@ export function CategoriesScreen() {
         }
     };
 
-    const handleDelete = async (id: string) => {
-        Alert.alert(
-            'Excluir Categoria',
-            'Tem certeza? Transações antigas podem ficar sem ícone.',
-            [
-                { text: 'Cancelar', style: 'cancel' },
-                {
-                    text: 'Excluir',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            await viewModel.deleteCategory(id);
-                            loadCategories();
-                        } catch (e: any) {
-                            Alert.alert('Erro', 'Não foi possível excluir.');
-                        }
-                    }
+    const handleDelete = (id: string) => {
+        Alert.alert('Excluir Categoria', 'Tem certeza?', [
+            { text: 'Cancelar', style: 'cancel' },
+            {
+                text: 'Excluir', style: 'destructive', onPress: async () => {
+                    await viewModel.deleteCategory(id);
+                    loadCategories();
                 }
-            ]
-        );
+            }
+        ]);
     };
 
     const renderItem = ({ item }: { item: Category }) => (
-        <View style={styles.card}>
-            <View style={[styles.iconContainer, { backgroundColor: item.color + '20' }]}>
-                <Feather name={item.icon as any} size={24} color={item.color} />
+        <TouchableOpacity
+            style={[styles.item, { backgroundColor: theme.surface, borderBottomColor: theme.border + '30' }]}
+            onLongPress={() => {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                item.id && handleDelete(item.id);
+            }}
+            activeOpacity={0.7}
+        >
+            <View style={[styles.iconContainer, { backgroundColor: item.color + '15' }]}>
+                <Feather name={item.icon as any} size={20} color={item.color} />
             </View>
-            <Text style={styles.cardName}>{item.name}</Text>
-            {item.is_custom && (
-                <TouchableOpacity onPress={() => item.id && handleDelete(item.id)} style={styles.deleteButton}>
-                    <Feather name="trash-2" size={18} color={theme.colors.textSecondary} />
-                </TouchableOpacity>
-            )}
-        </View>
+            <Text style={[styles.itemName, { color: theme.textPrimary }]}>{item.name}</Text>
+            <Feather name="chevron-right" size={16} color={theme.textSecondary} />
+        </TouchableOpacity>
     );
 
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" />
-            <LinearGradient colors={theme.colors.gradientPrimary} style={styles.header}>
+            <LinearGradient colors={theme.gradientPrimary} style={[styles.header, { paddingTop: insets.top + 10 }]}>
                 <View style={styles.headerTop}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <Feather name="arrow-left" size={24} color="#FFF" />
+                    <TouchableOpacity
+                        onPress={() => navigation.goBack()}
+                        style={styles.backButton}
+                    >
+                        <Feather name="arrow-left" size={20} color="#FFF" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Categorias</Text>
                     <View style={{ width: 40 }} />
@@ -117,73 +114,74 @@ export function CategoriesScreen() {
 
             <FlatList
                 data={categories}
-                keyExtractor={(item, index) => item.id || index.toString()}
+                keyExtractor={(item) => item.id!}
                 renderItem={renderItem}
                 contentContainerStyle={styles.listContent}
-                ListFooterComponent={() => <View style={{ height: 100 }} />}
+                showsVerticalScrollIndicator={false}
+                ListEmptyComponent={() => (
+                    <View style={styles.emptyContainer}>
+                        <View style={[styles.emptyIconCircle, { backgroundColor: theme.surface }]}>
+                            <Feather name="grid" size={40} color={theme.placeholder} />
+                        </View>
+                        <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Nenhuma categoria personalizada.</Text>
+                    </View>
+                )}
             />
 
-            <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
+            <TouchableOpacity
+                style={[styles.fab, { backgroundColor: theme.primary }]}
+                onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setModalVisible(true);
+                }}
+            >
                 <Feather name="plus" size={24} color="#FFF" />
             </TouchableOpacity>
 
-            <Modal
-                visible={modalVisible}
-                animationType="slide"
-                transparent={false}
-                presentationStyle='pageSheet'
-                onRequestClose={() => setModalVisible(false)}
-            >
-                <View style={styles.modalContainer}>
-                    <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Nova Categoria</Text>
+            <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModalVisible(false)}>
+                <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
+                    <View style={[styles.modalHeader, { borderBottomColor: theme.border + '40' }]}>
+                        <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>Nova Categoria</Text>
                         <TouchableOpacity onPress={() => setModalVisible(false)}>
-                            <Feather name="x" size={24} color={theme.colors.textPrimary} />
+                            <Feather name="x" size={24} color={theme.textPrimary} />
                         </TouchableOpacity>
                     </View>
 
-                    <ScrollView contentContainerStyle={{ padding: 20 }}>
-                        <CustomInput
-                            label="Nome da Categoria"
-                            placeholder="Ex: Assinaturas"
-                            value={newName}
-                            onChangeText={setNewName}
-                            icon="tag"
-                        />
+                    <ScrollView style={{ padding: 20 }} showsVerticalScrollIndicator={false}>
+                        <CustomInput label="Nome da Categoria" placeholder="Ex: Presentes, Academia..." value={name} onChangeText={setName} />
 
-                        <Text style={styles.sectionLabel}>Ícone</Text>
-                        <View style={styles.grid}>
+                        <Text style={[styles.label, { color: theme.textPrimary }]}>Ícone</Text>
+                        <View style={styles.iconGrid}>
                             {AVAILABLE_ICONS.map(icon => (
                                 <TouchableOpacity
                                     key={icon}
-                                    style={[
-                                        styles.iconOption,
-                                        newIcon === icon && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }
-                                    ]}
-                                    onPress={() => setNewIcon(icon)}
+                                    style={[styles.iconOption, { backgroundColor: theme.surface, borderColor: theme.border }, selectedIcon === icon && { borderColor: theme.primary, backgroundColor: theme.primary + '10' }]}
+                                    onPress={() => {
+                                        Haptics.selectionAsync();
+                                        setSelectedIcon(icon);
+                                    }}
                                 >
-                                    <Feather name={icon as any} size={20} color={newIcon === icon ? '#FFF' : theme.colors.textSecondary} />
+                                    <Feather name={icon} size={20} color={selectedIcon === icon ? theme.primary : theme.textSecondary} />
                                 </TouchableOpacity>
                             ))}
                         </View>
 
-                        <Text style={styles.sectionLabel}>Cor</Text>
-                        <View style={styles.grid}>
+                        <Text style={[styles.label, { color: theme.textPrimary }]}>Cor</Text>
+                        <View style={styles.colorGrid}>
                             {AVAILABLE_COLORS.map(color => (
                                 <TouchableOpacity
                                     key={color}
-                                    style={[
-                                        styles.colorOption,
-                                        { backgroundColor: color },
-                                        newColor === color && styles.colorOptionSelected
-                                    ]}
-                                    onPress={() => setNewColor(color)}
+                                    style={[styles.colorOption, { backgroundColor: color }, selectedColor === color && styles.colorOptionSelected]}
+                                    onPress={() => {
+                                        Haptics.selectionAsync();
+                                        setSelectedColor(color);
+                                    }}
                                 />
                             ))}
                         </View>
 
-                        <View style={{ marginTop: 30 }}>
-                            <PrimaryButton title="Salvar Categoria" onPress={handleAddCategory} loading={submitting} />
+                        <View style={{ marginTop: 20 }}>
+                            <PrimaryButton title="Adicionar" onPress={handleAddCategory} loading={submitting} />
                         </View>
                     </ScrollView>
                 </View>
@@ -192,86 +190,77 @@ export function CategoriesScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: theme.colors.background },
-    header: {
-        paddingTop: 50,
-        paddingBottom: 20,
-        paddingHorizontal: 20,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
-    },
-    headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    backButton: { padding: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12 },
-    headerTitle: { fontSize: 18, color: '#FFF', fontWeight: 'bold' },
+function createStyles(theme: any, baseTheme: any) {
+    return StyleSheet.create({
+        container: { flex: 1, backgroundColor: theme.background },
+        header: {
+            paddingBottom: 20,
+            paddingHorizontal: 20,
+            borderBottomLeftRadius: 30,
+            borderBottomRightRadius: 30,
+        },
+        headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+        backButton: { padding: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12 },
+        headerTitle: { fontSize: 18, color: '#FFF', fontWeight: 'bold' },
 
-    listContent: { padding: 20 },
-    card: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#FFF',
-        padding: 16,
-        borderRadius: 16,
-        marginBottom: 12,
-        ...theme.shadows.soft
-    },
-    iconContainer: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 16
-    },
-    cardName: { fontSize: 16, fontWeight: '600', color: theme.colors.textPrimary, flex: 1 },
-    deleteButton: { padding: 8 },
+        listContent: { padding: 20, paddingBottom: 100 },
+        item: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            padding: 16,
+            borderRadius: 16,
+            marginBottom: 12,
+            borderBottomWidth: 1,
+        },
+        iconContainer: {
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginRight: 16,
+        },
+        itemName: { flex: 1, fontSize: 16, fontWeight: '600' },
 
-    fab: {
-        position: 'absolute',
-        bottom: 30,
-        right: 30,
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: theme.colors.primary,
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...theme.shadows.default,
-        elevation: 5
-    },
+        fab: {
+            position: 'absolute',
+            bottom: 30,
+            right: 30,
+            width: 64,
+            height: 64,
+            borderRadius: 20,
+            alignItems: 'center',
+            justifyContent: 'center',
+            ...baseTheme.shadows.default,
+            elevation: 5
+        },
 
-    // Modal
-    modalContainer: { flex: 1, backgroundColor: theme.colors.background }, // Full screen modal
-    modalHeader: {
-        padding: 20,
-        paddingTop: 50, // SafeArea
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border
-    },
-    modalTitle: { fontSize: 20, fontWeight: 'bold' },
+        emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingTop: 100 },
+        emptyIconCircle: {
+            width: 80,
+            height: 80,
+            borderRadius: 40,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: 20,
+            ...baseTheme.shadows.soft
+        },
+        emptyText: { fontSize: 14, fontWeight: '500' },
 
-    sectionLabel: { fontSize: 16, fontWeight: '600', color: theme.colors.textPrimary, marginBottom: 12, marginTop: 20 },
-    grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-    iconOption: {
-        width: 48,
-        height: 48,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#FFF'
-    },
-    colorOption: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-    },
-    colorOptionSelected: {
-        borderWidth: 3,
-        borderColor: theme.colors.textPrimary
-    }
-});
+        modalContent: { flex: 1 },
+        modalHeader: {
+            padding: 20,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderBottomWidth: 1,
+        },
+        modalTitle: { fontSize: 20, fontWeight: 'bold' },
+        label: { fontSize: 14, fontWeight: '600', marginBottom: 12, marginTop: 20 },
+        iconGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+        iconOption: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+        colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+        colorOption: { width: 36, height: 36, borderRadius: 18, ...baseTheme.shadows.soft },
+        colorOptionSelected: { borderWidth: 3, borderColor: '#FFF', elevation: 4 }
+    });
+}
