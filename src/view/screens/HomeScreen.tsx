@@ -130,16 +130,19 @@ export function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      <LinearGradient colors={theme.gradientPrimary} style={styles.bgHeader} />
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <LinearGradient
+        colors={theme.gradientPrimary}
+        style={[styles.bgHeader, { height: 220 + insets.top }]}
+      />
 
       <TransactionList
         transactions={filteredTransactions}
         onPressItem={(item) => navigation.navigate('AddTransaction', { transaction: item })}
         onDeleteItem={handleDelete}
         ListHeaderComponent={
-          <View>
-            <View style={[styles.headerTop, { paddingTop: insets.top + 10 }]}>
+          <View style={{ paddingTop: insets.top }}>
+            <View style={styles.headerTop}>
               <View>
                 <Text style={styles.greetingText}>Olá,</Text>
                 <Text style={styles.usernameText}>Bem-vindo de volta</Text>
@@ -323,7 +326,11 @@ export function HomeScreen() {
             </View>
           </View>
         }
-        contentContainerStyle={{ padding: 20, paddingTop: 10, paddingBottom: 100 }}
+        contentContainerStyle={{
+          padding: 20,
+          paddingTop: 10,
+          paddingBottom: 100 + insets.bottom
+        }}
       />
     </View>
   );
@@ -337,7 +344,6 @@ function createStyles(theme: any, baseTheme: any) {
       top: 0,
       left: 0,
       right: 0,
-      height: 250,
       borderBottomLeftRadius: 30,
       borderBottomRightRadius: 30,
     },
@@ -345,7 +351,8 @@ function createStyles(theme: any, baseTheme: any) {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 12
+      marginBottom: 12,
+      paddingHorizontal: 5
     },
     greetingText: { color: 'rgba(255,255,255,0.7)', fontSize: 16 },
     usernameText: { color: '#FFF', fontSize: 20, fontWeight: 'bold' },

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert, Text, KeyboardAvoidingView, Platform, ScrollView, StatusBar } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, StyleSheet, Alert, Text, KeyboardAvoidingView, Platform, ScrollView, StatusBar, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 
@@ -10,12 +9,11 @@ import { CustomInput } from '../components/CustomInput';
 import { PrimaryButton } from '../components/PrimaryButton';
 
 export function LoginScreen() {
-  const { theme, baseTheme, isDarkMode } = useAppTheme();
+  const { theme, baseTheme } = useAppTheme();
   const styles = createStyles(theme, baseTheme);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
 
   const [viewModel] = useState(() => new AuthViewModel());
 
@@ -55,67 +53,65 @@ export function LoginScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <LinearGradient
-        colors={theme.gradientPrimary}
-        style={styles.header}
-      >
-        <SafeAreaView edges={['top']} style={styles.safeArea}>
-          <View style={[styles.logoCircle, { backgroundColor: theme.surface }]}>
-            <Feather name="dollar-sign" size={40} color={theme.primary} />
-          </View>
-          <Text style={styles.welcomeText}>Bem-vindo</Text>
-          <Text style={styles.subText}>Controle suas finanças com simplicidade.</Text>
-        </SafeAreaView>
-      </LinearGradient>
+      <LinearGradient colors={theme.gradientPrimary} style={styles.container}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardView}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.logoContainer}>
+              <View style={[styles.logoCircle, { backgroundColor: theme.surface }]}>
+                <Feather name="dollar-sign" size={40} color={theme.primary} />
+              </View>
+              <Text style={styles.appName}>App Financeiro</Text>
+              <Text style={styles.appTagline}>Sua liberdade financeira começa aqui</Text>
+            </View>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.content}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <View style={[styles.formCard, { backgroundColor: theme.surface }]}>
-            <CustomInput
-              label="Email"
-              placeholder="seu@email.com"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              icon="mail"
-            />
+            <View style={[styles.formCard, { backgroundColor: theme.surface }]}>
+              <CustomInput
+                label="Email"
+                placeholder="Digite seu e-mail"
+                icon="mail"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
 
-            <CustomInput
-              label="Senha"
-              placeholder="Sua senha secreta"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              icon="lock"
-              rightAction={{
-                icon: showPassword ? 'eye-off' : 'eye',
-                onPress: () => setShowPassword(!showPassword)
-              }}
-            />
+              <CustomInput
+                label="Senha"
+                placeholder="Sua senha secreta"
+                icon="lock"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
 
-            <View style={styles.actions}>
               <PrimaryButton
-                title="Entrar"
+                title={loading ? 'Entrando...' : 'Acessar Conta'}
                 onPress={handleLogin}
                 loading={loading}
+                style={styles.button}
               />
 
-              <View style={styles.spacer} />
-
-              <PrimaryButton
-                title="Criar conta"
-                onPress={handleSignUp}
-                variant="outline"
-                loading={loading}
-              />
+              <TouchableOpacity style={styles.forgotPassword}>
+                <Text style={[styles.forgotText, { color: theme.primary }]}>Esqueceu a senha?</Text>
+              </TouchableOpacity>
             </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+
+            <View style={styles.footer}>
+              <Text style={[styles.footerText, { color: theme.textSecondary }]}>Não tem uma conta?</Text>
+              <TouchableOpacity onPress={handleSignUp}>
+                <Text style={[styles.signUpText, { color: theme.primary }]}> Cadastre-se</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </LinearGradient>
     </View>
   );
 }
@@ -124,57 +120,68 @@ function createStyles(theme: any, baseTheme: any) {
   return StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: theme.background
     },
-    header: {
-      height: 300,
-      paddingHorizontal: 20,
-      alignItems: 'center',
+    keyboardView: {
+      flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
       justifyContent: 'center',
-      borderBottomLeftRadius: 30,
-      borderBottomRightRadius: 30,
+      paddingHorizontal: 25,
+      paddingVertical: 40,
     },
-    safeArea: {
+    logoContainer: {
       alignItems: 'center',
-      width: '100%',
+      marginBottom: 40,
     },
     logoCircle: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
+      width: 100,
+      height: 100,
+      borderRadius: 50,
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: 20,
+      backgroundColor: '#FFF',
       ...baseTheme.shadows.default
     },
-    welcomeText: {
-      fontSize: 32,
+    appName: {
+      fontSize: 28,
       fontWeight: 'bold',
       color: '#FFF',
-      marginBottom: 5
+      marginBottom: 8,
     },
-    subText: {
+    appTagline: {
+      fontSize: 16,
       color: 'rgba(255,255,255,0.8)',
-      fontSize: 16
-    },
-    content: {
-      flex: 1,
-      marginTop: -40,
-    },
-    scrollContent: {
-      paddingHorizontal: 20,
-      paddingBottom: 20
+      textAlign: 'center',
     },
     formCard: {
-      borderRadius: 20,
+      borderRadius: 24,
       padding: 24,
       ...baseTheme.shadows.default
     },
-    actions: {
-      marginTop: 20,
+    button: {
+      marginTop: 10,
     },
-    spacer: {
-      height: 15
+    forgotPassword: {
+      alignItems: 'center',
+      marginTop: 15,
+    },
+    forgotText: {
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    footer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      marginTop: 30,
+    },
+    footerText: {
+      fontSize: 14,
+    },
+    signUpText: {
+      fontSize: 14,
+      fontWeight: 'bold',
     }
   });
 }

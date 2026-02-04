@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, TextInput, StyleSheet, Alert, Text, TouchableOpacity, Switch, Platform, ScrollView, StatusBar, FlatList } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, TextInput, StyleSheet, Alert, Text, TouchableOpacity, Switch, Platform, ScrollView, StatusBar, FlatList, KeyboardAvoidingView } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -57,7 +57,7 @@ export function AddTransactionScreen() {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     loadData();
   }, []);
 
@@ -137,150 +137,164 @@ export function AddTransactionScreen() {
         </View>
       </LinearGradient>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={[styles.inputGroup, { backgroundColor: theme.surface }]}>
-          <CustomInput
-            label="Descrição"
-            placeholder="Ex: Supermercado"
-            value={description}
-            onChangeText={setDescription}
-            icon="file-text"
-          />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 + insets.bottom }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={[styles.inputGroup, { backgroundColor: theme.surface }]}>
+            <CustomInput
+              label="Descrição"
+              placeholder="Ex: Supermercado"
+              value={description}
+              onChangeText={setDescription}
+              icon="file-text"
+            />
 
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, marginBottom: 10 }}>
-            <Text style={[styles.label, { color: theme.textPrimary }]}>Categoria</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Categories')}>
-              <Text style={{ color: theme.primary, fontSize: 12, fontWeight: 'bold' }}>Configurar</Text>
-            </TouchableOpacity>
-          </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, marginBottom: 10 }}>
+              <Text style={[styles.label, { color: theme.textPrimary }]}>Categoria</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Categories')}>
+                <Text style={{ color: theme.primary, fontSize: 12, fontWeight: 'bold' }}>Configurar</Text>
+              </TouchableOpacity>
+            </View>
 
-          <View style={styles.categoriesGrid}>
-            {categories.map((cat, idx) => (
-              <TouchableOpacity
-                key={cat.id || `cat-${idx}`}
-                style={[styles.categoryCard, { borderColor: theme.border }, category === cat.name && { borderColor: theme.primary, backgroundColor: theme.surface }]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setCategory(cat.name);
-                }}
-              >
-                <View style={[styles.catIcon, { backgroundColor: theme.background }, category === cat.name && { backgroundColor: theme.primary }]}>
-                  <Feather
-                    name={cat.icon as any}
-                    size={20}
-                    color={category === cat.name ? '#FFF' : theme.textSecondary}
+            <View style={styles.categoriesGrid}>
+              {categories.map((cat, idx) => (
+                <TouchableOpacity
+                  key={cat.id || `cat-${idx}`}
+                  style={[styles.categoryCard, { borderColor: theme.border }, category === cat.name && { borderColor: theme.primary, backgroundColor: theme.surface }]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setCategory(cat.name);
+                  }}
+                >
+                  <View style={[styles.catIcon, { backgroundColor: theme.background }, category === cat.name && { backgroundColor: theme.primary }]}>
+                    <Feather
+                      name={cat.icon as any}
+                      size={20}
+                      color={category === cat.name ? '#FFF' : theme.textSecondary}
+                    />
+                  </View>
+                  <Text style={[styles.categoryText, { color: theme.textSecondary }, category === cat.name && { color: theme.primary, fontWeight: 'bold' }]}>{cat.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.row}>
+              <View style={{ flex: 1, marginRight: 10 }}>
+                <Text style={[styles.label, { color: theme.textPrimary }]}>Data</Text>
+                <TouchableOpacity style={[styles.dateButton, { borderColor: theme.border }]} onPress={() => setShowDatePicker(true)}>
+                  <Feather name="calendar" size={20} color={theme.textPrimary} />
+                  <Text style={[styles.dateText, { color: theme.textPrimary }]}>{date.toLocaleDateString()}</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={[styles.label, { color: theme.textPrimary }]}>Recorrente?</Text>
+                <View style={[styles.switchContainer, { borderColor: theme.border }]}>
+                  <Text style={[styles.switchLabel, { color: theme.textPrimary }]}>{isRecurring ? 'Sim' : 'Não'}</Text>
+                  <Switch
+                    value={isRecurring}
+                    onValueChange={setIsRecurring}
+                    trackColor={{ false: "#767577", true: theme.primary }}
+                    thumbColor={"#f4f3f4"}
                   />
                 </View>
-                <Text style={[styles.categoryText, { color: theme.textSecondary }, category === cat.name && { color: theme.primary, fontWeight: 'bold' }]}>{cat.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={styles.row}>
-            <View style={{ flex: 1, marginRight: 10 }}>
-              <Text style={[styles.label, { color: theme.textPrimary }]}>Data</Text>
-              <TouchableOpacity style={[styles.dateButton, { borderColor: theme.border }]} onPress={() => setShowDatePicker(true)}>
-                <Feather name="calendar" size={20} color={theme.textPrimary} />
-                <Text style={[styles.dateText, { color: theme.textPrimary }]}>{date.toLocaleDateString()}</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={{ flex: 1, marginLeft: 10 }}>
-              <Text style={[styles.label, { color: theme.textPrimary }]}>Recorrente?</Text>
-              <View style={[styles.switchContainer, { borderColor: theme.border }]}>
-                <Text style={[styles.switchLabel, { color: theme.textPrimary }]}>{isRecurring ? 'Sim' : 'Não'}</Text>
-                <Switch
-                  value={isRecurring}
-                  onValueChange={setIsRecurring}
-                  trackColor={{ false: "#767577", true: theme.primary }}
-                  thumbColor={"#f4f3f4"}
-                />
               </View>
             </View>
-          </View>
 
-          {!isIncome && (
-            <View style={{ marginTop: 20 }}>
-              <Text style={[styles.label, { color: theme.textPrimary }]}>Forma de Pagamento</Text>
-              <View style={[styles.methodSelector, { backgroundColor: isDarkMode ? '#1A1A1A' : '#F5F5F5' }]}>
-                <TouchableOpacity
-                  style={[styles.methodButton, paymentMethod === 'cash' && { backgroundColor: theme.surface }]}
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    setPaymentMethod('cash');
-                  }}
-                >
-                  <Feather name="dollar-sign" size={18} color={paymentMethod === 'cash' ? theme.primary : theme.textSecondary} />
-                  <Text style={[styles.methodText, { color: paymentMethod === 'cash' ? theme.primary : theme.textSecondary }]}>Dinheiro</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.methodButton, paymentMethod === 'credit_card' && { backgroundColor: theme.surface }]}
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    setPaymentMethod('credit_card');
-                  }}
-                >
-                  <Feather name="credit-card" size={18} color={paymentMethod === 'credit_card' ? theme.primary : theme.textSecondary} />
-                  <Text style={[styles.methodText, { color: paymentMethod === 'credit_card' ? theme.primary : theme.textSecondary }]}>Cartão</Text>
-                </TouchableOpacity>
-              </View>
-
-              {paymentMethod === 'credit_card' && (
-                <View style={{ marginTop: 15 }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <Text style={[styles.label, { marginTop: 0, color: theme.textPrimary }]}>Selecionar Cartão</Text>
-                    <TouchableOpacity onPress={() => navigation.navigate('Cards')}>
-                      <Text style={{ color: theme.primary, fontSize: 12, fontWeight: 'bold' }}>Gerenciar</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {cards.length > 0 ? (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
-                      {cards.map(card => (
-                        <TouchableOpacity
-                          key={card.id}
-                          style={[
-                            styles.miniCard,
-                            { backgroundColor: card.color + '20', borderColor: card.color },
-                            cardId === card.id && { backgroundColor: card.color, borderWidth: 0 }
-                          ]}
-                          onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            setCardId(card.id);
-                          }}
-                        >
-                          <Text style={[styles.miniCardText, { color: theme.textPrimary }, cardId === card.id && { color: '#FFF' }]}>{card.name}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  ) : (
-                    <TouchableOpacity style={[styles.errorContainer, { backgroundColor: isDarkMode ? '#331111' : '#FFF5F5', borderColor: isDarkMode ? '#662222' : '#FED7D7' }]} onPress={() => navigation.navigate('Cards')}>
-                      <Text style={[styles.errorText, { color: isDarkMode ? '#FF8888' : '#C53030' }]}>Nenhum cartão cadastrado. Toque para adicionar.</Text>
-                    </TouchableOpacity>
-                  )}
+            {!isIncome && (
+              <View style={{ marginTop: 20 }}>
+                <Text style={[styles.label, { color: theme.textPrimary }]}>Forma de Pagamento</Text>
+                <View style={[styles.methodSelector, { backgroundColor: isDarkMode ? '#1A1A1A' : '#F5F5F5' }]}>
+                  <TouchableOpacity
+                    style={[styles.methodButton, paymentMethod === 'cash' && { backgroundColor: theme.surface }]}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setPaymentMethod('cash');
+                    }}
+                  >
+                    <Feather name="dollar-sign" size={18} color={paymentMethod === 'cash' ? theme.primary : theme.textSecondary} />
+                    <Text style={[styles.methodText, { color: paymentMethod === 'cash' ? theme.primary : theme.textSecondary }]}>Dinheiro</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.methodButton, paymentMethod === 'credit_card' && { backgroundColor: theme.surface }]}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setPaymentMethod('credit_card');
+                    }}
+                  >
+                    <Feather name="credit-card" size={18} color={paymentMethod === 'credit_card' ? theme.primary : theme.textSecondary} />
+                    <Text style={[styles.methodText, { color: paymentMethod === 'credit_card' ? theme.primary : theme.textSecondary }]}>Cartão</Text>
+                  </TouchableOpacity>
                 </View>
-              )}
-            </View>
-          )}
 
-          {showDatePicker && (
-            <DateTimePicker
-              value={date}
-              mode="date"
-              display="default"
-              maximumDate={new Date()}
-              onChange={(event, selectedDate) => {
-                setShowDatePicker(false);
-                if (selectedDate) setDate(selectedDate);
-              }}
+                {paymentMethod === 'credit_card' && (
+                  <View style={{ marginTop: 15 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                      <Text style={[styles.label, { marginTop: 0, color: theme.textPrimary }]}>Selecionar Cartão</Text>
+                      <TouchableOpacity onPress={() => navigation.navigate('Cards')}>
+                        <Text style={{ color: theme.primary, fontSize: 12, fontWeight: 'bold' }}>Gerenciar</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {cards.length > 0 ? (
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
+                        {cards.map(card => (
+                          <TouchableOpacity
+                            key={card.id}
+                            style={[
+                              styles.miniCard,
+                              { backgroundColor: card.color + '20', borderColor: card.color },
+                              cardId === card.id && { backgroundColor: card.color, borderWidth: 0 }
+                            ]}
+                            onPress={() => {
+                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                              setCardId(card.id);
+                            }}
+                          >
+                            <Text style={[styles.miniCardText, { color: theme.textPrimary }, cardId === card.id && { color: '#FFF' }]}>{card.name}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    ) : (
+                      <TouchableOpacity style={[styles.errorContainer, { backgroundColor: isDarkMode ? '#331111' : '#FFF5F5', borderColor: isDarkMode ? '#662222' : '#FED7D7' }]} onPress={() => navigation.navigate('Cards')}>
+                        <Text style={[styles.errorText, { color: isDarkMode ? '#FF8888' : '#C53030' }]}>Nenhum cartão cadastrado. Toque para adicionar.</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+              </View>
+            )}
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={date}
+                mode="date"
+                display="default"
+                maximumDate={new Date()}
+                onChange={(event, selectedDate) => {
+                  setShowDatePicker(false);
+                  if (selectedDate) setDate(selectedDate);
+                }}
+              />
+            )}
+          </View>
+
+          <View style={styles.footer}>
+            <PrimaryButton
+              title={transaction ? 'Salvar Alterações' : 'Adicionar Transação'}
+              onPress={handleSave}
+              loading={loading}
             />
-          )}
-        </View>
-
-        <View style={styles.footer}>
-          <PrimaryButton title="Salvar" onPress={handleSave} loading={loading} />
-        </View>
-      </ScrollView>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }

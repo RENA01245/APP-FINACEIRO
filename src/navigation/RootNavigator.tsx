@@ -8,6 +8,7 @@ import { Session } from '@supabase/supabase-js';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LoginScreen } from '../view/screens/LoginScreen';
 import { HomeScreen } from '../view/screens/HomeScreen';
@@ -58,6 +59,10 @@ import { SettingsScreen } from '../view/screens/SettingsScreen';
 
 function AppTabs() {
   const { theme, baseTheme } = useAppTheme();
+  const insets = useSafeAreaInsets();
+
+  const bottomPadding = Math.max(insets.bottom, 15);
+  const tabBarHeight = 65 + insets.bottom;
   return (
     <Tab.Navigator
       screenOptions={{
@@ -65,15 +70,16 @@ function AppTabs() {
         tabBarShowLabel: true,
         tabBarStyle: {
           position: 'absolute',
-          bottom: 20,
+          bottom: bottomPadding,
           left: 10,
           right: 10,
           backgroundColor: theme.surface,
-          borderRadius: 20,
-          height: 70,
-          paddingBottom: 10,
+          borderRadius: 22,
+          height: 65,
+          paddingBottom: Platform.OS === 'ios' ? 0 : 0,
           ...baseTheme.shadows.default,
           borderTopWidth: 0,
+          elevation: 8,
         },
         tabBarActiveTintColor: theme.primary,
         tabBarInactiveTintColor: theme.textSecondary,

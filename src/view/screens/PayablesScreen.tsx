@@ -132,21 +132,25 @@ export function PayablesScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      <LinearGradient colors={theme.gradientPrimary} style={[styles.header, { paddingTop: insets.top + 10 }]}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <LinearGradient colors={theme.gradientPrimary} style={[styles.header, { paddingTop: insets.top }]}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>Contas a Pagar</Text>
           <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.addButton}>
-            <Feather name="plus" size={24} color={theme.primary} />
+            <Feather name="plus" size={24} color="#FFF" />
           </TouchableOpacity>
         </View>
+        <Text style={styles.headerSubtitle}>Mantenha seus pagamentos em dia</Text>
       </LinearGradient>
 
       <FlatList
         data={payables}
-        keyExtractor={item => item.id || Math.random().toString()}
+        keyExtractor={(item) => item.id!}
         renderItem={renderItem}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={{
+          padding: 20,
+          paddingBottom: 110 + insets.bottom
+        }}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -258,6 +262,7 @@ function createStyles(theme: any, baseTheme: any) {
     },
     headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#FFF' },
+    headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 4 },
     addButton: {
       backgroundColor: '#FFF',
       width: 44,

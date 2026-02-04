@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView, Alert, Image, StatusBar } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -68,7 +68,8 @@ export function SettingsScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: theme.background }]}>
-            <LinearGradient colors={theme.gradientPrimary} style={[styles.header, { paddingTop: insets.top + 10 }]}>
+            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+            <LinearGradient colors={theme.gradientPrimary} style={[styles.header, { paddingTop: insets.top }]}>
                 <View style={styles.headerTop}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                         <Feather name="arrow-left" size={24} color="#FFF" />
@@ -91,7 +92,7 @@ export function SettingsScreen() {
                 </View>
             </LinearGradient>
 
-            <ScrollView contentContainerStyle={styles.scrollContent}>
+            <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 + insets.bottom }]}>
                 <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>PREFERÊNCIAS</Text>
                 <View style={styles.section}>
                     <SettingItem

@@ -81,9 +81,9 @@ export function ReportsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      <LinearGradient colors={theme.gradientPrimary} style={[styles.header, { paddingTop: insets.top + 10 }]}>
+      <LinearGradient colors={theme.gradientPrimary} style={[styles.header, { paddingTop: insets.top }]}>
         <View style={styles.headerTop}>
           <TouchableOpacity
             onPress={() => {
@@ -112,7 +112,10 @@ export function ReportsScreen() {
       {loading ? (
         <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 50 }} />
       ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}
+          showsVerticalScrollIndicator={false}
+        >
 
           <View style={styles.chartContainer}>
             <Text style={[styles.chartTitle, { color: theme.textPrimary }]}>Principais Gastos</Text>

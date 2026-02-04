@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, StatusBar, KeyboardAvoidingView, Platform } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
@@ -54,8 +54,8 @@ export function BudgetsScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" />
-            <LinearGradient colors={theme.gradientPrimary} style={[styles.header, { paddingTop: insets.top + 10 }]}>
+            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+            <LinearGradient colors={theme.gradientPrimary} style={[styles.header, { paddingTop: insets.top }]}>
                 <View style={styles.headerTop}>
                     <TouchableOpacity
                         onPress={() => {
@@ -72,47 +72,56 @@ export function BudgetsScreen() {
                 <Text style={styles.monthText}>Ajuste suas metas mensais</Text>
             </LinearGradient>
 
-            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                <View style={[styles.card, { backgroundColor: theme.surface }]}>
-                    <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>Definir Limites</Text>
-                    <Text style={[styles.cardSubtitle, { color: theme.textSecondary }]}>Toque no valor para editar</Text>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                style={{ flex: 1 }}
+            >
+                <ScrollView
+                    contentContainerStyle={[styles.content, { paddingBottom: 40 + insets.bottom }]}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <View style={[styles.card, { backgroundColor: theme.surface }]}>
+                        <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>Definir Limites</Text>
+                        <Text style={[styles.cardSubtitle, { color: theme.textSecondary }]}>Toque no valor para editar</Text>
 
-                    {categories.map((cat, index) => {
-                        const budgetItem = budgetStatus.find(b => b.category === cat) || { category: cat, budget: 0, spent: 0 };
-                        return (
-                            <View key={index} style={[styles.row, { borderBottomColor: theme.border + '30' }, index === categories.length - 1 && { borderBottomWidth: 0, marginBottom: 0 }]}>
-                                <View style={styles.categoryContainer}>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                        <View style={[styles.dot, { backgroundColor: theme.primary }]} />
-                                        <Text style={[styles.categoryName, { color: theme.textPrimary }]}>{cat}</Text>
+                        {categories.map((cat, index) => {
+                            const budgetItem = budgetStatus.find(b => b.category === cat) || { category: cat, budget: 0, spent: 0 };
+                            return (
+                                <View key={index} style={[styles.row, { borderBottomColor: theme.border + '30' }, index === categories.length - 1 && { borderBottomWidth: 0, marginBottom: 0 }]}>
+                                    <View style={styles.categoryContainer}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                            <View style={[styles.dot, { backgroundColor: theme.primary }]} />
+                                            <Text style={[styles.categoryName, { color: theme.textPrimary }]}>{cat}</Text>
+                                        </View>
+
+                                        <View style={[styles.inputContainer, { backgroundColor: theme.background, borderColor: theme.border + '80' }]}>
+                                            <Text style={[styles.currency, { color: theme.textSecondary }]}>R$</Text>
+                                            <TextInput
+                                                style={[styles.input, { color: theme.textPrimary }]}
+                                                placeholder="0.00"
+                                                placeholderTextColor={theme.placeholder}
+                                                keyboardType="numeric"
+                                                defaultValue={budgetItem.budget > 0 ? budgetItem.budget.toString() : ''}
+                                                onEndEditing={(e) => saveBudget(cat, e.nativeEvent.text)}
+                                            />
+                                        </View>
                                     </View>
 
-                                    <View style={[styles.inputContainer, { backgroundColor: theme.background, borderColor: theme.border + '80' }]}>
-                                        <Text style={[styles.currency, { color: theme.textSecondary }]}>R$</Text>
-                                        <TextInput
-                                            style={[styles.input, { color: theme.textPrimary }]}
-                                            placeholder="0.00"
-                                            placeholderTextColor={theme.placeholder}
-                                            keyboardType="numeric"
-                                            defaultValue={budgetItem.budget > 0 ? budgetItem.budget.toString() : ''}
-                                            onEndEditing={(e) => saveBudget(cat, e.nativeEvent.text)}
+                                    <View style={styles.progressContainer}>
+                                        <BudgetProgressBar
+                                            category=""
+                                            budget={budgetItem.budget}
+                                            spent={budgetItem.spent}
+                                            showLabel={false}
                                         />
                                     </View>
                                 </View>
-
-                                <View style={styles.progressContainer}>
-                                    <BudgetProgressBar
-                                        category=""
-                                        budget={budgetItem.budget}
-                                        spent={budgetItem.spent}
-                                        showLabel={false}
-                                    />
-                                </View>
-                            </View>
-                        );
-                    })}
-                </View>
-            </ScrollView>
+                            );
+                        })}
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </View>
     );
 }

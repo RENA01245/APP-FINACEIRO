@@ -138,8 +138,8 @@ export function CardsScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" />
-            <LinearGradient colors={theme.gradientPrimary} style={[styles.header, { paddingTop: insets.top + 10 }]}>
+            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+            <LinearGradient colors={theme.gradientPrimary} style={[styles.header, { paddingTop: insets.top }]}>
                 <View style={styles.headerTop}>
                     <TouchableOpacity
                         onPress={() => {
@@ -153,13 +153,17 @@ export function CardsScreen() {
                     <Text style={styles.headerTitle}>Meus Cartões</Text>
                     <View style={{ width: 40 }} />
                 </View>
+                <Text style={styles.headerSubtitle}>Gerencie seus cartões de crédito</Text>
             </LinearGradient>
 
             <FlatList
                 data={cards}
-                keyExtractor={(item) => item.id!}
+                keyExtractor={(item) => item.id || Math.random().toString()}
                 renderItem={renderCard}
-                contentContainerStyle={styles.listContent}
+                contentContainerStyle={{
+                    padding: 20,
+                    paddingBottom: 40 + insets.bottom
+                }}
                 showsVerticalScrollIndicator={false}
                 ListEmptyComponent={() => (
                     <View style={styles.emptyContainer}>
@@ -234,14 +238,15 @@ function createStyles(theme: any, baseTheme: any) {
     return StyleSheet.create({
         container: { flex: 1, backgroundColor: theme.background },
         header: {
-            paddingBottom: 20,
+            paddingBottom: 25,
             paddingHorizontal: 20,
             borderBottomLeftRadius: 30,
             borderBottomRightRadius: 30,
         },
-        headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+        headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 },
         backButton: { padding: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12 },
-        headerTitle: { fontSize: 18, color: '#FFF', fontWeight: 'bold' },
+        headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#FFF' },
+        headerSubtitle: { fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 4 },
 
         listContent: { padding: 20, paddingBottom: 100 },
         cardItem: {
