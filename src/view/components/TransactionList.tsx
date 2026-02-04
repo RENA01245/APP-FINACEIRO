@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, SectionList, TouchableOpacity, ViewStyle } from
 import { Transaction } from '../../model/Transaction';
 import { theme } from '../../design/theme';
 import { Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { RectButton, Swipeable } from 'react-native-gesture-handler';
 import Animated, { FadeInRight, FadeOutLeft } from 'react-native-reanimated';
 
@@ -64,7 +65,13 @@ export function TransactionList({ transactions, onPressItem, onDeleteItem, ListH
 
     const renderRightActions = (id: string) => {
         return (
-            <RectButton style={styles.deleteAction} onPress={() => onDeleteItem(id)}>
+            <RectButton
+                style={styles.deleteAction}
+                onPress={() => {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                    onDeleteItem(id);
+                }}
+            >
                 <Feather name="trash-2" size={20} color="#FFF" />
             </RectButton>
         );
@@ -72,7 +79,13 @@ export function TransactionList({ transactions, onPressItem, onDeleteItem, ListH
 
     const renderLeftActions = (item: Transaction) => {
         return (
-            <RectButton style={styles.editAction} onPress={() => onPressItem(item)}>
+            <RectButton
+                style={styles.editAction}
+                onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    onPressItem(item);
+                }}
+            >
                 <Feather name="edit-2" size={20} color="#FFF" />
             </RectButton>
         );
@@ -91,10 +104,16 @@ export function TransactionList({ transactions, onPressItem, onDeleteItem, ListH
                     friction={2}
                     rightThreshold={40}
                     leftThreshold={40}
+                    onSwipeableWillOpen={(direction) => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
                 >
                     <TouchableOpacity
                         style={styles.itemContainer}
-                        onPress={() => onPressItem(item)}
+                        onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            onPressItem(item);
+                        }}
                         activeOpacity={0.7}
                     >
                         <View style={[styles.iconContainer, { backgroundColor: isExpense ? '#FFF2F2' : '#F2FBF2' }]}>

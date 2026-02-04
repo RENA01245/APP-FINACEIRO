@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 
 import { theme } from '../../design/theme';
 import { CreditCard } from '../../model/CreditCard';
@@ -15,7 +16,7 @@ import { CustomInput } from '../components/CustomInput';
 const CARD_COLORS = ['#2196F3', '#4CAF50', '#E91E63', '#9C27B0', '#000000', '#FF9800', '#607D8B'];
 
 export function CardsScreen() {
-    const navigation = useNavigation();
+    const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
     const [viewModel] = useState(() => new CardViewModel());
     const [cards, setCards] = useState<CreditCard[]>([]);
@@ -91,28 +92,45 @@ export function CardsScreen() {
     const renderCard = ({ item }: { item: CreditCard }) => (
         <TouchableOpacity
             style={styles.cardItem}
-            onLongPress={() => item.id && handleDelete(item.id)}
+            onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                // Here we could open more details or transactions for this card
+            }}
+            onLongPress={() => {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                item.id && handleDelete(item.id);
+            }}
             activeOpacity={0.8}
         >
-            <LinearGradient colors={[item.color, item.color + 'CC']} style={styles.cardGradient}>
+            <LinearGradient
+                colors={[item.color, item.color + 'CC']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.cardGradient}
+            >
                 <View style={styles.cardHeader}>
-                    <Text style={styles.cardName}>{item.name}</Text>
-                    <Feather name="credit-card" size={24} color="rgba(255,255,255,0.7)" />
+                    <View>
+                        <Text style={styles.cardName}>{item.name}</Text>
+                        <Text style={styles.cardType}>Crédito</Text>
+                    </View>
+                    <View style={styles.cardChip}>
+                        <Feather name="credit-card" size={24} color="#FFF" />
+                    </View>
                 </View>
 
                 <View style={styles.cardBody}>
-                    <Text style={styles.cardLabel}>Limite Total</Text>
-                    <Text style={styles.cardValue}>R$ {item.limit_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</Text>
+                    <Text style={styles.cardLabel}>Limite Disponível</Text>
+                    <Text style={styles.cardValue}>R$ {item.limit_amount.toFixed(2)}</Text>
                 </View>
 
                 <View style={styles.cardFooter}>
-                    <View>
-                        <Text style={styles.cardSubLabel}>Fechamento</Text>
-                        <Text style={styles.cardSubValue}>Dia {item.closing_day}</Text>
+                    <View style={styles.cardFooterItem}>
+                        <Feather name="calendar" size={10} color="rgba(255,255,255,0.7)" />
+                        <Text style={styles.cardSubLabel}> FECHAMENTO: {item.closing_day}</Text>
                     </View>
-                    <View>
-                        <Text style={styles.cardSubLabel}>Vencimento</Text>
-                        <Text style={styles.cardSubValue}>Dia {item.due_day}</Text>
+                    <View style={styles.cardFooterItem}>
+                        <Feather name="clock" size={10} color="rgba(255,255,255,0.7)" />
+                        <Text style={styles.cardSubLabel}> VENCIMENTO: {item.due_day}</Text>
                     </View>
                 </View>
             </LinearGradient>
@@ -124,8 +142,14 @@ export function CardsScreen() {
             <StatusBar barStyle="light-content" />
             <LinearGradient colors={theme.colors.gradientPrimary} style={[styles.header, { paddingTop: insets.top + 10 }]}>
                 <View style={styles.headerTop}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <Feather name="arrow-left" size={24} color="#FFF" />
+                    <TouchableOpacity
+                        onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            navigation.goBack();
+                        }}
+                        style={styles.backButton}
+                    >
+                        <Feather name="arrow-left" size={20} color="#FFF" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Meus Cartões</Text>
                     <View style={{ width: 40 }} />
@@ -139,13 +163,21 @@ export function CardsScreen() {
                 contentContainerStyle={styles.listContent}
                 ListEmptyComponent={() => (
                     <View style={styles.emptyContainer}>
-                        <Feather name="credit-card" size={64} color={theme.colors.border} />
+                        <View style={styles.emptyIconCircle}>
+                            <Feather name="credit-card" size={40} color={theme.colors.placeholder} />
+                        </View>
                         <Text style={styles.emptyText}>Nenhum cartão cadastrado.</Text>
                     </View>
                 )}
             />
 
-            <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
+            <TouchableOpacity
+                style={styles.fab}
+                onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setModalVisible(true);
+                }}
+            >
                 <Feather name="plus" size={24} color="#FFF" />
             </TouchableOpacity>
 
@@ -153,7 +185,10 @@ export function CardsScreen() {
                 <View style={styles.modalContent}>
                     <View style={styles.modalHeader}>
                         <Text style={styles.modalTitle}>Novo Cartão</Text>
-                        <TouchableOpacity onPress={() => setModalVisible(false)}>
+                        <TouchableOpacity onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            setModalVisible(false);
+                        }}>
                             <Feather name="x" size={24} color={theme.colors.textPrimary} />
                         </TouchableOpacity>
                     </View>
@@ -177,7 +212,10 @@ export function CardsScreen() {
                                 <TouchableOpacity
                                     key={color}
                                     style={[styles.colorOption, { backgroundColor: color }, selectedColor === color && styles.colorOptionSelected]}
-                                    onPress={() => setSelectedColor(color)}
+                                    onPress={() => {
+                                        Haptics.selectionAsync();
+                                        setSelectedColor(color);
+                                    }}
                                 />
                             ))}
                         </View>
@@ -205,25 +243,33 @@ const styles = StyleSheet.create({
     backButton: { padding: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12 },
     headerTitle: { fontSize: 18, color: '#FFF', fontWeight: 'bold' },
 
-    listContent: { padding: 20 },
-    cardItem: { marginBottom: 20, borderRadius: 20, overflow: 'hidden', ...theme.shadows.default },
-    cardGradient: { padding: 20, height: 180, justifyContent: 'space-between' },
-    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    cardName: { color: '#FFF', fontSize: 20, fontWeight: 'bold' },
+    listContent: { padding: 20, paddingBottom: 100 },
+    cardItem: {
+        marginBottom: 20,
+        borderRadius: 24,
+        overflow: 'hidden',
+        ...theme.shadows.default,
+        height: 190
+    },
+    cardGradient: { padding: 24, flex: 1, justifyContent: 'space-between' },
+    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+    cardName: { color: '#FFF', fontSize: 22, fontWeight: 'bold', letterSpacing: 0.5 },
+    cardType: { color: 'rgba(255,255,255,0.7)', fontSize: 12, marginTop: 2 },
+    cardChip: { width: 44, height: 32, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
     cardBody: { marginTop: 10 },
-    cardLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 12, textTransform: 'uppercase' },
-    cardValue: { color: '#FFF', fontSize: 24, fontWeight: 'bold' },
-    cardFooter: { flexDirection: 'row', justifyContent: 'space-between' },
-    cardSubLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 10, textTransform: 'uppercase' },
-    cardSubValue: { color: '#FFF', fontSize: 14, fontWeight: '600' },
+    cardLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1 },
+    cardValue: { color: '#FFF', fontSize: 28, fontWeight: 'bold', marginTop: 4 },
+    cardFooter: { flexDirection: 'row', gap: 20 },
+    cardFooterItem: { flexDirection: 'row', alignItems: 'center' },
+    cardSubLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '700' },
 
     fab: {
         position: 'absolute',
         bottom: 30,
         right: 30,
-        width: 56,
-        height: 56,
-        borderRadius: 28,
+        width: 64,
+        height: 64,
+        borderRadius: 20, // Material 3 shape
         backgroundColor: theme.colors.primary,
         alignItems: 'center',
         justifyContent: 'center',
@@ -231,8 +277,22 @@ const styles = StyleSheet.create({
         elevation: 5
     },
 
-    emptyContainer: { alignItems: 'center', marginTop: 100 },
-    emptyText: { marginTop: 20, color: theme.colors.textSecondary, fontSize: 16 },
+    emptyContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingTop: 100
+    },
+    emptyIconCircle: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: '#FFF',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 20,
+        ...theme.shadows.soft
+    },
+    emptyText: { color: theme.colors.textSecondary, fontSize: 16, fontWeight: '500' },
 
     modalContent: { flex: 1, backgroundColor: theme.colors.background },
     modalHeader: {
@@ -241,12 +301,12 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         borderBottomWidth: 1,
-        borderBottomColor: theme.colors.border
+        borderBottomColor: theme.colors.border + '40'
     },
     modalTitle: { fontSize: 20, fontWeight: 'bold' },
     row: { flexDirection: 'row', justifyContent: 'space-between' },
-    label: { fontSize: 14, fontWeight: '600', color: theme.colors.textPrimary, marginBottom: 10, marginTop: 10 },
-    colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
-    colorOption: { width: 44, height: 44, borderRadius: 22 },
-    colorOptionSelected: { borderWidth: 3, borderColor: theme.colors.textPrimary }
+    label: { fontSize: 14, fontWeight: '600', color: theme.colors.textPrimary, marginBottom: 12, marginTop: 10 },
+    colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 },
+    colorOption: { width: 48, height: 48, borderRadius: 24, ...theme.shadows.soft },
+    colorOptionSelected: { borderWidth: 3, borderColor: '#FFF', elevation: 4 }
 });

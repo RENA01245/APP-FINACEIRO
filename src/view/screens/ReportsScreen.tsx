@@ -1,7 +1,8 @@
 
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity, ActivityIndicator, StatusBar } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { PieChart, BarChart } from 'react-native-chart-kit';
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useRoute, useNavigation } from '@react-navigation/native';
@@ -14,8 +15,9 @@ const screenWidth = Dimensions.get('window').width;
 
 export function ReportsScreen() {
   const [viewModel] = useState(() => new ReportsViewModel());
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const route = useRoute<any>();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [monthLabel, setMonthLabel] = useState('');
   const [pieData, setPieData] = useState<any[]>([]);
@@ -52,11 +54,13 @@ export function ReportsScreen() {
   );
 
   const handleNextMonth = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     await viewModel.nextMonth();
     loadData();
   };
 
   const handlePrevMonth = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     await viewModel.prevMonth();
     loadData();
   };
@@ -75,13 +79,19 @@ export function ReportsScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      <LinearGradient colors={theme.colors.gradientPrimary} style={styles.header}>
+      <LinearGradient colors={theme.colors.gradientPrimary} style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Feather name="arrow-left" size={24} color="#FFF" />
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              navigation.goBack();
+            }}
+            style={styles.backButton}
+          >
+            <Feather name="arrow-left" size={20} color="#FFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Relatórios</Text>
-          <View style={{ width: 24 }} />
+          <View style={{ width: 40 }} />
         </View>
 
         <View style={styles.monthSelector}>
@@ -101,38 +111,56 @@ export function ReportsScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent}>
 
           <View style={styles.chartContainer}>
-            <Text style={styles.chartTitle}>Despesas por Categoria</Text>
+            <Text style={styles.chartTitle}>Principais Gastos</Text>
             {pieData.length > 0 ? (
               <>
                 <PieChart
-                  data={pieData}
-                  width={screenWidth - 60}
-                  height={220}
+                  data={pieData.map(item => ({
+                    ...item,
+                    legendFontColor: theme.colors.textSecondary,
+                    legendFontSize: 12
+                  }))}
+                  width={screenWidth - 40}
+                  height={200}
                   chartConfig={chartConfig}
                   accessor={"amount"}
                   backgroundColor={"transparent"}
                   paddingLeft={"15"}
-                  center={[10, 0]}
+                  center={[5, 0]}
                   absolute
                 />
+
+                <View style={styles.categoryList}>
+                  {pieData.sort((a, b) => b.amount - a.amount).map((item, index) => (
+                    <View key={index} style={styles.categoryItem}>
+                      <View style={[styles.categoryDot, { backgroundColor: item.color }]} />
+                      <Text style={styles.categoryName}>{item.name}</Text>
+                      <Text style={styles.categoryAmount}>R$ {item.amount.toFixed(2)}</Text>
+                    </View>
+                  ))}
+                </View>
+
                 <View style={styles.totalBadge}>
-                  <Text style={styles.totalText}>Total: R$ {totalExpense.toFixed(2)}</Text>
+                  <Text style={styles.totalLabel}>Total no Mês</Text>
+                  <Text style={styles.totalValue}>R$ {totalExpense.toFixed(2)}</Text>
                 </View>
               </>
             ) : (
-              <View style={styles.noDataContainer}>
-                <Feather name="pie-chart" size={48} color={theme.colors.placeholder} />
-                <Text style={styles.noDataText}>Sem despesas neste mês.</Text>
+              <View style={styles.emptyContainer}>
+                <View style={styles.emptyIconCircle}>
+                  <Feather name="pie-chart" size={32} color={theme.colors.placeholder} />
+                </View>
+                <Text style={styles.emptyText}>Nenhuma despesa encontrada</Text>
               </View>
             )}
           </View>
 
           <View style={styles.chartContainer}>
-            <Text style={styles.chartTitle}>Receitas vs Despesas</Text>
+            <Text style={styles.chartTitle}>Balanço Mensal</Text>
             {barData && (barData.datasets[0].data[0] > 0 || barData.datasets[0].data[1] > 0) ? (
               <BarChart
                 data={barData}
-                width={screenWidth - 60}
+                width={screenWidth - 40}
                 height={220}
                 yAxisLabel="R$ "
                 yAxisSuffix=""
@@ -143,14 +171,19 @@ export function ReportsScreen() {
                 verticalLabelRotation={0}
                 showValuesOnTopOfBars
                 fromZero
+                style={{
+                  marginVertical: 8,
+                  borderRadius: 16
+                }}
               />
             ) : (
-              <View style={styles.noDataContainer}>
-                <Feather name="bar-chart-2" size={48} color={theme.colors.placeholder} />
-                <Text style={styles.noDataText}>Sem transações para comparar.</Text>
+              <View style={styles.emptyContainer}>
+                <View style={styles.emptyIconCircle}>
+                  <Feather name="bar-chart-2" size={32} color={theme.colors.placeholder} />
+                </View>
+                <Text style={styles.emptyText}>Sem dados de comparação</Text>
               </View>
             )}
-
           </View>
 
         </ScrollView>
@@ -181,40 +214,91 @@ const styles = StyleSheet.create({
   monthLabelText: { color: '#FFF', fontSize: 18, fontWeight: '600', minWidth: 140, textAlign: 'center' },
 
   scrollContent: {
-    padding: 20,
     paddingBottom: 40,
   },
   chartContainer: {
     backgroundColor: '#fff',
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 20,
-    marginBottom: 20,
-    ...theme.shadows.default,
+    marginHorizontal: 20,
+    marginTop: 20,
+    ...theme.shadows.soft,
     alignItems: 'center'
   },
   chartTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 20,
+    fontWeight: '700',
+    marginBottom: 16,
     color: theme.colors.textPrimary,
     alignSelf: 'flex-start'
   },
-  totalBadge: {
-    marginTop: 20,
-    backgroundColor: '#FFEBEE',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20
-  },
-  totalText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: theme.colors.danger
-  },
-  noDataContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 30 },
-  noDataText: {
+  categoryList: {
+    width: '100%',
     marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border + '50',
+    paddingTop: 15,
+  },
+  categoryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  categoryDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 10,
+  },
+  categoryName: {
+    flex: 1,
+    fontSize: 14,
+    color: theme.colors.textPrimary,
+    fontWeight: '500',
+  },
+  categoryAmount: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: theme.colors.textPrimary,
+  },
+  totalBadge: {
+    marginTop: 10,
+    backgroundColor: theme.colors.danger + '10',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 16,
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  totalLabel: {
+    fontSize: 14,
     color: theme.colors.textSecondary,
-    fontStyle: 'italic'
+    fontWeight: '500',
+  },
+  totalValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.colors.danger,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: theme.colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  emptyText: {
+    color: theme.colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '500',
   }
 });

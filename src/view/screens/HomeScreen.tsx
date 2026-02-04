@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 
 import { AuthViewModel } from '../../viewmodel/AuthViewModel';
 import { HomeViewModel } from '../../viewmodel/HomeViewModel';
@@ -14,6 +15,7 @@ import { PayablesViewModel } from '../../viewmodel/PayablesViewModel';
 import { Transaction } from '../../model/Transaction';
 import { Payable } from '../../model/Payable';
 import { DEFAULT_CATEGORIES } from '../../model/Category';
+import { NotificationService } from '../../infra/notifications/NotificationService';
 
 import { theme } from '../../design/theme';
 import { TransactionList } from '../components/TransactionList';
@@ -49,6 +51,18 @@ export function HomeScreen() {
       const pending = await payablesViewModel.getPending();
       setUpcomingPayables(pending.slice(0, 2));
 
+      // Schedule notifications for all pending payables
+      pending.forEach(payable => {
+        if (payable.id) {
+          NotificationService.schedulePayableAlert(
+            payable.id,
+            payable.description,
+            payable.amount,
+            new Date(payable.due_date)
+          );
+        }
+      });
+
       const data = await homeViewModel.getTransactions();
       setTransactions(data);
       setSummary(homeViewModel.calculateSummary(data));
@@ -67,12 +81,18 @@ export function HomeScreen() {
     }, [])
   );
 
+  React.useEffect(() => {
+    NotificationService.requestPermissions();
+  }, []);
+
   const handleNextMonth = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     await homeViewModel.nextMonth();
     loadData();
   };
 
   const handlePrevMonth = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     await homeViewModel.prevMonth();
     loadData();
   };
@@ -128,7 +148,13 @@ export function HomeScreen() {
                 <Text style={styles.greetingText}>Olá,</Text>
                 <Text style={styles.usernameText}>Bem-vindo de volta</Text>
               </View>
-              <TouchableOpacity onPress={() => authViewModel.logout()} style={styles.logoutButton}>
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  authViewModel.logout();
+                }}
+                style={styles.logoutButton}
+              >
                 <Feather name="log-out" size={20} color="#FFF" />
               </TouchableOpacity>
             </View>
@@ -176,7 +202,10 @@ export function HomeScreen() {
               <View style={styles.sectionContainer}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                   <Text style={styles.sectionTitle}>Faturas do Cartão</Text>
-                  <TouchableOpacity onPress={() => navigation.navigate('Cards')}>
+                  <TouchableOpacity onPress={() => {
+                    Haptics.selectionAsync();
+                    navigation.navigate('Cards');
+                  }}>
                     <Text style={styles.seeAll}>Gerenciar</Text>
                   </TouchableOpacity>
                 </View>
@@ -211,7 +240,10 @@ export function HomeScreen() {
               <View style={styles.sectionContainer}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Text style={styles.sectionTitle}>Próximas Contas</Text>
-                  <TouchableOpacity onPress={() => navigation.navigate('Contas')}>
+                  <TouchableOpacity onPress={() => {
+                    Haptics.selectionAsync();
+                    navigation.navigate('Contas');
+                  }}>
                     <Text style={styles.seeAll}>Ver todas</Text>
                   </TouchableOpacity>
                 </View>

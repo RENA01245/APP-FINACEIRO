@@ -15,8 +15,8 @@ export const theme = {
   },
   typography: {
     fontFamily: {
-      regular: 'System', // Podemos mudar para uma fonte customizada depois
-      bold: 'System', 
+      regular: 'System',
+      bold: 'System',
     },
     sizes: {
       xs: 12,
