@@ -7,6 +7,8 @@ create table if not exists public.transactions (
   type text check (type in ('income', 'expense')) not null,
   category text,
   is_recurring boolean default false,
+  payment_method text check (payment_method in ('cash', 'credit_card')) default 'cash',
+  card_id uuid, -- Referência opcional se houver tabela de cartões
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -77,3 +79,38 @@ using (auth.uid() = user_id);
 create policy "Usuários podem gerenciar suas próprias contas"
 on public.payables for all
 using (auth.uid() = user_id);
+
+
+-- 4. Tabela de Categorias (Categories)
+create table if not exists public.categories (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users not null,
+  name text not null,
+  icon text not null,
+  color text not null,
+  is_custom boolean default true,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.categories enable row level security;
+
+create policy "Usuários podem ver suas próprias categorias" on public.categories for select using (auth.uid() = user_id);
+create policy "Usuários podem gerenciar suas próprias categorias" on public.categories for all using (auth.uid() = user_id);
+
+
+-- 5. Tabela de Cartões (Credit Cards)
+create table if not exists public.credit_cards (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users not null,
+  name text not null,
+  limit_amount numeric not null,
+  closing_day int not null,
+  due_day int not null,
+  color text not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.credit_cards enable row level security;
+
+create policy "Usuários podem ver seus próprios cartões" on public.credit_cards for select using (auth.uid() = user_id);
+create policy "Usuários podem gerenciar seus próprios cartões" on public.credit_cards for all using (auth.uid() = user_id);

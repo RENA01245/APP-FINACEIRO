@@ -1,10 +1,11 @@
 
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, SectionList, TouchableOpacity, ViewStyle } from 'react-native';
 import { Transaction } from '../../model/Transaction';
 import { theme } from '../../design/theme';
 import { Feather } from '@expo/vector-icons';
-import { Card } from './Card';
+import { RectButton, Swipeable } from 'react-native-gesture-handler';
+import Animated, { FadeInRight, FadeOutLeft } from 'react-native-reanimated';
 
 interface TransactionListProps {
     transactions: Transaction[];
@@ -26,7 +27,56 @@ const getCategoryIcon = (category: string): keyof typeof Feather.glyphMap => {
     }
 };
 
+const formatDateSection = (date: Date) => {
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) return 'Hoje';
+    if (date.toDateString() === yesterday.toDateString()) return 'Ontem';
+
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
+};
+
+const groupTransactions = (transactions: Transaction[]) => {
+    const groups: { [key: string]: Transaction[] } = {};
+
+    // Sort transactions by date descending
+    const sorted = [...transactions].sort((a, b) => {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateB - dateA;
+    });
+
+    sorted.forEach(t => {
+        const dateKey = t.created_at ? new Date(t.created_at).toDateString() : 'Sem Data';
+        if (!groups[dateKey]) groups[dateKey] = [];
+        groups[dateKey].push(t);
+    });
+
+    return Object.entries(groups).map(([date, data]) => ({
+        title: date === 'Sem Data' ? 'Sem Data' : formatDateSection(new Date(date)),
+        data
+    }));
+};
+
 export function TransactionList({ transactions, onPressItem, onDeleteItem, ListHeaderComponent, contentContainerStyle }: TransactionListProps) {
+
+    const renderRightActions = (id: string) => {
+        return (
+            <RectButton style={styles.deleteAction} onPress={() => onDeleteItem(id)}>
+                <Feather name="trash-2" size={20} color="#FFF" />
+            </RectButton>
+        );
+    };
+
+    const renderLeftActions = (item: Transaction) => {
+        return (
+            <RectButton style={styles.editAction} onPress={() => onPressItem(item)}>
+                <Feather name="edit-2" size={20} color="#FFF" />
+            </RectButton>
+        );
+    };
 
     const renderItem = ({ item }: { item: Transaction }) => {
         const isExpense = item.type === 'expense';
@@ -34,56 +84,62 @@ export function TransactionList({ transactions, onPressItem, onDeleteItem, ListH
         const iconName = getCategoryIcon(item.category || '');
 
         return (
-            <View style={styles.itemWrapper}>
-                <TouchableOpacity
-                    style={styles.itemContainer}
-                    onPress={() => onPressItem(item)}
-                    activeOpacity={0.7}
+            <Animated.View entering={FadeInRight} exiting={FadeOutLeft}>
+                <Swipeable
+                    renderRightActions={() => item.id ? renderRightActions(item.id) : null}
+                    renderLeftActions={() => renderLeftActions(item)}
+                    friction={2}
+                    rightThreshold={40}
+                    leftThreshold={40}
                 >
-                    <View style={[styles.iconContainer, { backgroundColor: isExpense ? '#FFEBEE' : '#E8F5E9' }]}>
-                        <Feather name={iconName} size={20} color={amountColor} />
-                    </View>
-
-                    <View style={styles.details}>
-                        <Text style={styles.description} numberOfLines={1}>{item.description}</Text>
-                        <Text style={styles.category}>{item.category || 'Geral'}</Text>
-                    </View>
-
-                    <View style={styles.amountContainer}>
-                        <Text style={[styles.amount, { color: amountColor }]}>
-                            {isExpense ? '-' : '+'} R$ {Number(item.amount).toFixed(2)}
-                        </Text>
-                        <Text style={styles.date}>
-                            {item.created_at ? new Date(item.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : ''}
-                        </Text>
-                    </View>
-                </TouchableOpacity>
-
-                {/* Delete Action (could be swipeable in future, but keeping simple button for now) */}
-                {item.id && (
                     <TouchableOpacity
-                        style={styles.deleteButton}
-                        onPress={() => onDeleteItem(item.id!)}
+                        style={styles.itemContainer}
+                        onPress={() => onPressItem(item)}
+                        activeOpacity={0.7}
                     >
-                        <Feather name="trash-2" size={18} color={theme.colors.textSecondary} />
+                        <View style={[styles.iconContainer, { backgroundColor: isExpense ? '#FFF2F2' : '#F2FBF2' }]}>
+                            <Feather name={iconName} size={16} color={amountColor} />
+                        </View>
+
+                        <View style={styles.details}>
+                            <Text style={styles.description} numberOfLines={1}>{item.description}</Text>
+                            <Text style={styles.category}>{item.category || 'Geral'}</Text>
+                        </View>
+
+                        <View style={styles.amountContainer}>
+                            <Text style={[styles.amount, { color: amountColor }]}>
+                                {isExpense ? '-' : '+'} R$ {Number(item.amount).toFixed(2)}
+                            </Text>
+                        </View>
                     </TouchableOpacity>
-                )}
-            </View>
+                </Swipeable>
+            </Animated.View>
         );
     };
 
+    const sections = groupTransactions(transactions);
+
     return (
-        <FlatList
-            data={transactions}
+        <SectionList
+            sections={sections}
             keyExtractor={(item) => item.id || Math.random().toString()}
             renderItem={renderItem}
+            renderSectionHeader={({ section: { title } }) => (
+                <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionHeaderText}>{title}</Text>
+                </View>
+            )}
             ListHeaderComponent={ListHeaderComponent}
             contentContainerStyle={[styles.listContent, contentContainerStyle]}
             showsVerticalScrollIndicator={false}
+            stickySectionHeadersEnabled={false}
             ListEmptyComponent={
                 <View style={styles.emptyContainer}>
-                    <Feather name="inbox" size={48} color={theme.colors.placeholder} />
-                    <Text style={styles.emptyText}>Nenhuma transação neste mês</Text>
+                    <View style={styles.emptyIconCircle}>
+                        <Feather name="file-text" size={32} color={theme.colors.placeholder} />
+                    </View>
+                    <Text style={styles.emptyTitle}>Sem transações</Text>
+                    <Text style={styles.emptySubtitle}>Seu extrato aparecerá aqui.</Text>
                 </View>
             }
         />
@@ -94,70 +150,93 @@ const styles = StyleSheet.create({
     listContent: {
         paddingBottom: 100,
     },
-    itemWrapper: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: theme.colors.surface,
-        marginBottom: theme.spacing.sm,
-        borderRadius: theme.borderRadius.md,
-        ...theme.shadows.soft,
-        marginHorizontal: 1, // prevent shadow clipping
+    sectionHeader: {
+        paddingTop: 16,
+        paddingBottom: 8,
+        backgroundColor: 'transparent',
+    },
+    sectionHeaderText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: theme.colors.textSecondary,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     },
     itemContainer: {
-        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        padding: theme.spacing.md,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        backgroundColor: theme.colors.surface,
+        borderBottomWidth: 0.5,
+        borderBottomColor: theme.colors.border + '40',
+        borderRadius: 4, // Very subtle rounding for "integrated" look
     },
     iconContainer: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 36,
+        height: 36,
+        borderRadius: 12, // More Material 3 square-rounded
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: theme.spacing.md,
+        marginRight: 12,
     },
     details: {
         flex: 1,
-        marginRight: theme.spacing.sm,
+        marginRight: 8,
     },
     description: {
-        fontSize: theme.typography.sizes.md,
+        fontSize: 14,
         fontWeight: '600',
         color: theme.colors.textPrimary,
         marginBottom: 2,
     },
     category: {
-        fontSize: theme.typography.sizes.xs,
+        fontSize: 12,
         color: theme.colors.textSecondary,
     },
     amountContainer: {
         alignItems: 'flex-end',
     },
     amount: {
-        fontSize: theme.typography.sizes.md,
+        fontSize: 15,
         fontWeight: 'bold',
     },
-    date: {
-        fontSize: theme.typography.sizes.xs,
-        color: theme.colors.textSecondary,
-        marginTop: 2,
-    },
-    deleteButton: {
-        padding: theme.spacing.md,
-        borderLeftWidth: 1,
-        borderLeftColor: theme.colors.border,
+    deleteAction: {
+        backgroundColor: theme.colors.danger,
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: 70,
         height: '100%',
-        justifyContent: 'center'
+    },
+    editAction: {
+        backgroundColor: theme.colors.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: 70,
+        height: '100%',
     },
     emptyContainer: {
         alignItems: 'center',
         justifyContent: 'center',
-        paddingTop: 50,
+        paddingTop: 60,
     },
-    emptyText: {
-        marginTop: theme.spacing.md,
+    emptyIconCircle: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: '#F8F9FA',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 16,
+    },
+    emptyTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: theme.colors.textPrimary,
+        marginBottom: 4,
+    },
+    emptySubtitle: {
         color: theme.colors.textSecondary,
-        fontSize: theme.typography.sizes.md,
+        fontSize: 14,
     }
 });

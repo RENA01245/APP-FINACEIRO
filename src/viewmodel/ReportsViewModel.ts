@@ -32,14 +32,14 @@ export class ReportsViewModel {
   getExpensesByCategory(transactions: Transaction[]) {
     const expenses = transactions.filter(t => t.type === 'expense');
     const byCategory: { [key: string]: number } = {};
-    
+
     expenses.forEach(t => {
       const cat = t.category || 'Outros';
       byCategory[cat] = (byCategory[cat] || 0) + t.amount;
     });
 
     const colors = [
-      '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', 
+      '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
       '#E7E9ED', '#71B37C', '#E67E22', '#F1C40F'
     ];
 
@@ -57,17 +57,17 @@ export class ReportsViewModel {
     let expense = 0;
 
     transactions.forEach(t => {
-        if (t.type === 'income') income += t.amount;
-        else expense += t.amount;
+      if (t.type === 'income') income += t.amount;
+      else expense += t.amount;
     });
 
     return {
-        labels: ["Receitas", "Despesas"],
-        datasets: [
-            {
-                data: [income, expense]
-            }
-        ]
+      labels: ["Receitas", "Despesas"],
+      datasets: [
+        {
+          data: [income, expense]
+        }
+      ]
     };
   }
 }

@@ -52,6 +52,9 @@ export class AddTransactionViewModel {
 
     const value = this.validate(amount, category);
 
+    // Ensure we don't send an empty string for cardId to a UUID column
+    const sanitizedCardId = paymentMethod === 'credit_card' && cardId && cardId.length > 0 ? cardId : undefined;
+
     await this.updateTransactionUseCase.execute({
       id,
       user_id: session.user.id,
@@ -61,7 +64,7 @@ export class AddTransactionViewModel {
       category,
       isRecurring,
       payment_method: paymentMethod,
-      card_id: cardId,
+      card_id: sanitizedCardId,
       created_at: date.toISOString(),
     });
   }

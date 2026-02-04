@@ -11,9 +11,10 @@ export class TransactionRepositorySupabase {
         description: transaction.description,
         type: transaction.type,
         category: transaction.category,
-        is_recurring: transaction.isRecurring || false,
-        payment_method: transaction.payment_method || 'cash',
-        card_id: transaction.card_id
+        is_recurring: transaction.isRecurring ?? false,
+        payment_method: transaction.payment_method ?? 'cash',
+        card_id: transaction.card_id || null,
+        created_at: transaction.created_at || new Date().toISOString()
       });
 
     if (error) {
@@ -47,6 +48,7 @@ export class TransactionRepositorySupabase {
     if (error) {
       throw new Error(error.message);
     }
+
     return (data || []).map((item: any) => ({
       ...item,
       isRecurring: item.is_recurring,
@@ -58,22 +60,30 @@ export class TransactionRepositorySupabase {
   async update(transaction: Transaction): Promise<void> {
     if (!transaction.id) throw new Error('Transaction ID required for update');
 
-    const { error } = await supabase
+    const updatePayload = {
+      amount: transaction.amount,
+      description: transaction.description,
+      type: transaction.type,
+      category: transaction.category,
+      is_recurring: transaction.isRecurring ?? false,
+      payment_method: transaction.payment_method ?? 'cash',
+      card_id: transaction.card_id || null,
+      created_at: transaction.created_at
+    };
+
+    const { data, error } = await supabase
       .from('transactions')
-      .update({
-        amount: transaction.amount,
-        description: transaction.description,
-        type: transaction.type,
-        category: transaction.category,
-        is_recurring: transaction.isRecurring,
-        payment_method: transaction.payment_method,
-        card_id: transaction.card_id,
-        created_at: transaction.created_at // Allow updating the date
-      })
-      .eq('id', transaction.id);
+      .update(updatePayload)
+      .eq('id', transaction.id)
+      .select();
 
     if (error) {
+      console.error('Supabase update error:', error);
       throw new Error(error.message);
+    }
+
+    if (!data || data.length === 0) {
+      throw new Error('Não foi possível atualizar: verifique as permissões de acesso (RLS) no Supabase.');
     }
   }
 
@@ -118,7 +128,6 @@ export class TransactionRepositorySupabase {
       throw new Error(error.message);
     }
 
-    // Map database field to model
     return (data || []).map((item: any) => ({
       ...item,
       isRecurring: item.is_recurring

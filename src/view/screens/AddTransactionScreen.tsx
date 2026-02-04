@@ -5,6 +5,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AddTransactionViewModel } from '../../viewmodel/AddTransactionViewModel';
 import { CategoryViewModel } from '../../viewmodel/CategoryViewModel';
@@ -16,20 +17,21 @@ import { CustomInput } from '../components/CustomInput';
 
 export function AddTransactionScreen() {
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const transaction = route.params?.transaction;
 
-  const [amount, setAmount] = useState(transaction ? transaction.amount.toString() : '');
-  const [description, setDescription] = useState(transaction ? transaction.description : '');
-  const [type, setType] = useState<'income' | 'expense'>(transaction ? transaction.type : 'expense');
-  const [category, setCategory] = useState(transaction ? transaction.category : '');
-  const [isRecurring, setIsRecurring] = useState(transaction ? transaction.isRecurring : false);
+  const [amount, setAmount] = useState(transaction?.amount !== undefined ? transaction.amount.toString() : '');
+  const [description, setDescription] = useState(transaction?.description || '');
+  const [type, setType] = useState<'income' | 'expense'>(transaction?.type || 'expense');
+  const [category, setCategory] = useState(transaction?.category || '');
+  const [isRecurring, setIsRecurring] = useState(transaction?.isRecurring || false);
   const [date, setDate] = useState(transaction?.created_at ? new Date(transaction.created_at) : new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit_card'>(transaction ? transaction.payment_method : 'cash');
-  const [cardId, setCardId] = useState(transaction ? transaction.card_id : '');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'credit_card'>(transaction?.payment_method || 'cash');
+  const [cardId, setCardId] = useState(transaction?.card_id || '');
   const [cards, setCards] = useState<any[]>([]);
 
   const viewModel = new AddTransactionViewModel();
@@ -72,7 +74,8 @@ export function AddTransactionScreen() {
       }
       navigation.goBack();
     } catch (e: any) {
-      Alert.alert('Erro', e.message);
+      console.error('Error saving transaction:', e);
+      Alert.alert('Erro', e.message || 'Ocorreu um erro ao salvar a transação.');
     } finally {
       setLoading(false);
     }
@@ -88,7 +91,7 @@ export function AddTransactionScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <LinearGradient colors={activeGradient} style={styles.header}>
+      <LinearGradient colors={activeGradient} style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Feather name="arrow-left" size={24} color="#FFF" />
@@ -268,7 +271,7 @@ export function AddTransactionScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   header: {
-    paddingTop: 50,
+    paddingTop: 0,
     paddingBottom: 30,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 30,

@@ -38,11 +38,11 @@ export class PayablesViewModel {
     // Schedule notification for 9:00 AM on due date
     const triggerDate = new Date(date);
     triggerDate.setHours(9, 0, 0, 0);
-    
+
     // If 9 AM has passed, schedule for next day or just don't schedule? 
     // Actually, if it's today and past 9 AM, it might trigger immediately or fail.
     // The service handles "past date" check, so we are safe.
-    
+
     if (createdPayable && createdPayable.id) {
       await NotificationService.scheduleNotification(
         'Conta a Pagar',
@@ -58,13 +58,13 @@ export class PayablesViewModel {
     if (!session?.user) throw new Error('Usuário não autenticado');
 
     // Default category for paid bills
-    const category = 'Contas'; 
+    const category = 'Contas';
 
     await this.payUseCase.execute(
-      payable.id!, 
-      session.user.id, 
-      payable.amount, 
-      payable.description, 
+      payable.id!,
+      session.user.id,
+      payable.amount,
+      payable.description,
       category,
       date
     );

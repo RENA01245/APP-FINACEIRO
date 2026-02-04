@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, Alert, Scrol
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { theme } from '../../design/theme';
 import { CreditCard } from '../../model/CreditCard';
@@ -15,6 +16,7 @@ const CARD_COLORS = ['#2196F3', '#4CAF50', '#E91E63', '#9C27B0', '#000000', '#FF
 
 export function CardsScreen() {
     const navigation = useNavigation();
+    const insets = useSafeAreaInsets();
     const [viewModel] = useState(() => new CardViewModel());
     const [cards, setCards] = useState<CreditCard[]>([]);
     const [loading, setLoading] = useState(false);
@@ -120,7 +122,7 @@ export function CardsScreen() {
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" />
-            <LinearGradient colors={theme.colors.gradientPrimary} style={styles.header}>
+            <LinearGradient colors={theme.colors.gradientPrimary} style={[styles.header, { paddingTop: insets.top + 10 }]}>
                 <View style={styles.headerTop}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                         <Feather name="arrow-left" size={24} color="#FFF" />
@@ -193,7 +195,7 @@ export function CardsScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: theme.colors.background },
     header: {
-        paddingTop: 50,
+        paddingTop: 0,
         paddingBottom: 20,
         paddingHorizontal: 20,
         borderBottomLeftRadius: 30,
